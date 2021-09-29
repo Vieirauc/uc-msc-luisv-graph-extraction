@@ -10,8 +10,9 @@ commits = [target_commit]
 def extract_cfg_per_commit():
     for commit in commits:
         load_commit(commit)
-        extract_cfg()
-        map_cfg_per_function()
+        cfg_directory = extract_cfg()
+        cfg_directory = "/tmp/output-cfg-3b365793c1"
+        map_cfg_per_function(cfg_directory)
         save_cfg()
 
 
