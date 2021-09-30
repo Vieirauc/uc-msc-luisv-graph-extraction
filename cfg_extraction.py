@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 
 def extract_cfg(repository_path, commit):
@@ -9,13 +10,13 @@ def extract_cfg(repository_path, commit):
 
     # Command to parse the source code
     parse_command = "joern-parse {}".format(repository_path)
-    os.popen(parse_command)
+    print(subprocess.Popen(parse_command, shell=True, stdout=subprocess.PIPE).stdout.read())
 
     # Command to export the cfg
     graph_type = "cfg"
     # TODO: it needs some refactoring
     output_directory = "/tmp/output-{}-{}".format(graph_type, commit)
     parse_command = "joern-export --repr {} --out {}".format(graph_type, output_directory)
-    os.popen(parse_command)
+    print(subprocess.Popen(parse_command, shell=True, stdout=subprocess.PIPE).stdout.read())
 
     return output_directory
