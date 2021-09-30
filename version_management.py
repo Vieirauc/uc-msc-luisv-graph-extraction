@@ -8,6 +8,7 @@ VULNERABLE_FUNCTIONS_HEADER = "Vulnerable File Functions"
 
 def load_commit(commit):
     print("load_commit to be implemented")
+    return
     for filename in os.listdir(data_directory):
         filepath = os.path.join(data_directory, filename)
 
@@ -25,3 +26,4 @@ def load_commit(commit):
             for function in functions:
                 #print(row["File Path"], function["Name"], function["Vulnerable"])
                 function_name = function["Name"]
+
