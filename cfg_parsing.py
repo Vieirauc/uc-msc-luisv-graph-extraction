@@ -4,6 +4,7 @@ import pydot
 
 files_with_problems = []
 
+
 def read_graph(cfg_directory, filename):
     graphs = pydot.graph_from_dot_file(os.path.join(cfg_directory, filename))
     if graphs is None:
