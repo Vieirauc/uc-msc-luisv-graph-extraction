@@ -5,11 +5,28 @@ import pydot
 files_with_problems = []
 
 
+def adjust_file(filepath):
+    fin = open(filepath, "rt")
+    data = fin.read()
+    # replace all occurrences of the required string
+    data = data.replace('\\"', '\"')
+    fin.close()
+
+    # overwrite the input file with the resulting data
+    fin = open(filepath, "wt")
+    fin.write(data)
+    fin.close()
+
+    graphs = pydot.graph_from_dot_file(filepath)
+    return graphs
+
+
 def read_graph(cfg_directory, filename):
-    graphs = pydot.graph_from_dot_file(os.path.join(cfg_directory, filename))
+    filepath = os.path.join(cfg_directory, filename)
+    graphs = pydot.graph_from_dot_file(filepath)
     if graphs is None:
+        graphs = adjust_file(filepath)
         files_with_problems.append(filename)
-        return ""
     graph = graphs[0]
     print(filename, graph.get_name().replace('"', ''))
     return graph.get_name().replace('"', '')
