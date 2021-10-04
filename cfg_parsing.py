@@ -1,20 +1,26 @@
 import os
 import pydot
+import re
 
 
 files_with_problems = []
 
 
 def adjust_file(filepath):
-    fin = open(filepath, "rt")
-    data = fin.read()
+    changed_rows = []
     # replace all occurrences of the required string
-    data = data.replace('\\"', '\"')
-    fin.close()
+    with open(filepath, "rt") as f:
+        for row in f:
+            p = re.compile(r'(.*) \[label = \"(.*)\" \]')
+            m = p.match(row.strip())
+            if m is not None:
+                changed_rows.append('{} [label = "{}" ]\n'.format(m[1], m[2].strip().replace('"', '').replace("\n", "")))
+            else:
+                changed_rows.append(row)
 
     # overwrite the input file with the resulting data
     fin = open(filepath, "wt")
-    fin.write(data)
+    fin.write("".join(changed_rows))
     fin.close()
 
     graphs = pydot.graph_from_dot_file(filepath)
@@ -40,7 +46,7 @@ def map_cfg_per_function(cfg_directory):
         if filename.endswith(".dot"):
             function_graph_name = read_graph(cfg_directory, filename)
             map_cfg[function_graph_name] = filename
-    print("map_cfg ", map_cfg)
+    #print("map_cfg ", map_cfg)
     print("len(map_cfg) ", len(map_cfg.keys()))
     print("files_with_problems ", files_with_problems)
     print("len(files_with_problems) ", len(files_with_problems))
