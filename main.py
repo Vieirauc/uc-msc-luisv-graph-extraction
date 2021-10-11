@@ -10,19 +10,20 @@ target_commit = "3b365793c19aff95d1cf9bbea19f138752264d12"
 base_project_directory = "/home/zema-21/Projects/"
 commit_data_directory = "function-data"
 commit_data_mask = "{}-functions.csv"
+VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 
 
 def obtain_commits(project):
     filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
     df = pd.read_csv(filepath)
-    commits = df["Vulnerable Commit Hash"].tolist()
+    commits = df[VULNERABLE_COMMIT_HASH].tolist()
     commits = list(set(commits))
     return commits
 
 
 def extract_cfg_per_commit(repository_path, commits):
     for commit in commits:
-        load_commit(commit)
+        load_commit(repository_path, commit)
         cfg_directory = extract_cfg(repository_path, commit)
         map_cfg_per_function(cfg_directory)
         save_cfg()

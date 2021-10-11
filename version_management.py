@@ -1,29 +1,28 @@
+import git
 import json
 import os
 import pandas as pd
 
 data_directory = "function-data"
-VULNERABLE_FUNCTIONS_HEADER = "Vulnerable File Functions"
 
 
-def load_commit(commit):
+def load_commit(repository_directory, commit):
     print("load_commit to be implemented")
-    return
-    for filename in os.listdir(data_directory):
-        filepath = os.path.join(data_directory, filename)
+    running_directory = os.getcwd()
+    os.chdir(repository_directory)
 
-        df = pd.read_csv(filepath)
-        df = df[df["Vulnerable Commit Hash"] == commit]
-        df = df[df[VULNERABLE_FUNCTIONS_HEADER].notna()]
-        print(df.columns)
-        print(df.shape)
-        print(df[VULNERABLE_FUNCTIONS_HEADER])
+    print("Repository Directory: {}".format(repository_directory))
+    repo = git.Repo(repository_directory)
+    current_commit = repo.head.commit
+    print("Current commit: {}\n".format(current_commit))
 
-        for index, row in df.iterrows():
-            print(row["File Path"])
-            functions = json.loads(row[VULNERABLE_FUNCTIONS_HEADER])
-            #print(functions)
-            for function in functions:
-                #print(row["File Path"], function["Name"], function["Vulnerable"])
-                function_name = function["Name"]
+    checkout_command = "git checkout {}".format(commit)
+    my_cmd = os.popen(checkout_command).read()
+    print(my_cmd)
+    current_commit = repo.head.commit
+
+    print("Repository changed head to commit: {}\n".format(repo.head.commit))
+
+    os.chdir(running_directory)
+    return current_commit
 
