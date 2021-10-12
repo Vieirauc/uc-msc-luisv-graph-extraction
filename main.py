@@ -12,6 +12,8 @@ commit_data_directory = "function-data"
 commit_data_mask = "{}-functions.csv"
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 
+base_output_directory = "/opt/josep"
+
 
 def obtain_commits(project):
     filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
@@ -25,7 +27,8 @@ def extract_cfg_per_commit(project, commits):
     repository_path = os.path.join(base_project_directory, project)
     for commit in commits:
         load_commit(repository_path, commit)
-        cfg_directory = extract_cfg(project, repository_path, commit)
+        cfg_directory = extract_cfg(base_output_directory, project,
+                                    repository_path, commit)
         map_cfg_per_function(cfg_directory)
         save_cfg()
 
