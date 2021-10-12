@@ -34,7 +34,7 @@ def extract_cfg_per_commit(project, commits):
 
 
 def main():
-    projects = ["httpd"]
+    projects = ["httpd", "glibc"]
     for project in projects:
         commits = obtain_commits(project)
         extract_cfg_per_commit(project, commits)
