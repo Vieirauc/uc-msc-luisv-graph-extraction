@@ -23,8 +23,15 @@ def obtain_commits(project):
     return commits
 
 
+def check_output_directory(base_output_directory, project):
+    output_directory = os.path.join(base_output_directory, project)
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory)
+
+
 def extract_cfg_per_commit(project, commits):
     repository_path = os.path.join(base_project_directory, project)
+    check_output_directory(base_output_directory, project)
     for commit in commits:
         load_commit(repository_path, commit)
         cfg_directory = extract_cfg(base_output_directory, project,
