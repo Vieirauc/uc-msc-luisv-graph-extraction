@@ -21,19 +21,20 @@ def obtain_commits(project):
     return commits
 
 
-def extract_cfg_per_commit(repository_path, commits):
+def extract_cfg_per_commit(project, commits):
+    repository_path = os.path.join(base_project_directory, project)
     for commit in commits:
         load_commit(repository_path, commit)
-        cfg_directory = extract_cfg(repository_path, commit)
+        cfg_directory = extract_cfg(project, repository_path, commit)
         map_cfg_per_function(cfg_directory)
         save_cfg()
 
 
 def main():
-    project = "httpd"
-    repository_path = os.path.join(base_project_directory, project)
-    commits = obtain_commits(project)
-    extract_cfg_per_commit(repository_path, commits)
+    projects = ["httpd"]
+    for project in projects:
+        commits = obtain_commits(project)
+        extract_cfg_per_commit(project, commits)
 
 
 if __name__ == "__main__":
