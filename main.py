@@ -32,19 +32,23 @@ def check_output_directory(base_output_directory, project):
         os.mkdir(output_directory)
 
 
+def should_run_per_directory(project):
+    return project in ["glibc", "gecko-dev", "linux"]
+
+
 def extract_cfg_per_commit(project, commits):
     repository_path = os.path.join(base_project_directory, project)
     check_output_directory(base_output_directory, project)
     for commit in commits:
         load_commit(repository_path, commit)
         cfg_directory = extract_cfg(base_output_directory, project,
-                                    repository_path, commit)
+                                    repository_path, commit, should_run_per_directory(project))
         map_cfg_per_function(cfg_directory)
         save_cfg()
 
 
 def main():
-    projects = ["httpd", "glibc"]
+    projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
     for project in projects:
         commits = obtain_commits(project)
         extract_cfg_per_commit(project, commits)
