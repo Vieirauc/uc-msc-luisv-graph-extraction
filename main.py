@@ -16,6 +16,9 @@ base_output_directory = "/opt/josep"
 
 
 def obtain_commits(project):
+    # each file of "commit_data_directory" (function-data) is in the GitHub from João Henggeler
+    # scripts/output/final/[PROJECT_NAME]/affected-files-[PROJECT_ID]-[PROJECT]-master-branch-[date].csv
+    # e.g., "scripts/output/final/mozilla/affected-files-1-mozilla-master-branch-20210401212440.csv"
     filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
     df = pd.read_csv(filepath)
     commits = df[VULNERABLE_COMMIT_HASH].tolist()
