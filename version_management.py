@@ -7,7 +7,6 @@ data_directory = "function-data"
 
 
 def load_commit(repository_directory, commit):
-    print("load_commit to be implemented")
     running_directory = os.getcwd()
     os.chdir(repository_directory)
 
