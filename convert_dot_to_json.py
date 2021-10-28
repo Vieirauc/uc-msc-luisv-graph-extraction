@@ -18,12 +18,18 @@ projects = ["xen"]
 
 def convert_dot_to_json(project):
     project_dir = os.path.join(base_dot_directory, project)
+    wrong_files = []
     for directory in os.listdir(project_dir):
         print(directory)
         files = os.listdir(os.path.join(project_dir, directory))
         for filename in files[0:1]:
-            dot_graph = nx.nx_pydot.read_dot(os.path.join(project_dir, directory, filename))
-            print(json.dumps(json_graph.node_link_data(dot_graph)))
+            try:
+                dot_filepath = os.path.join(project_dir, directory, filename)
+                dot_graph = nx.nx_pydot.read_dot(dot_filepath)
+                print(json.dumps(json_graph.node_link_data(dot_graph)))
+            except TypeError:
+                wrong_files.append(dot_filepath)
+    print("Files with problems ({}): {} ".format(len(wrong_files), wrong_files))
 
 
 def main():
