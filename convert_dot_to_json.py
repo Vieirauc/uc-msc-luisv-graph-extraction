@@ -22,7 +22,7 @@ def convert_dot_to_json(project):
         print(directory)
         files = os.listdir(os.path.join(project_dir, directory))
         for filename in files[0:1]:
-            dot_graph = nx.nx_pydot.read_dot(filename)
+            dot_graph = nx.nx_pydot.read_dot(os.path.join(project_dir, directory, filename))
             print(json.dumps(json_graph.node_link_data(dot_graph)))
 
 
