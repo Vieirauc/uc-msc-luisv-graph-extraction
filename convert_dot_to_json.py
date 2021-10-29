@@ -7,6 +7,7 @@
 # Syntax :
 # python dot_to_json_graph.py graph.dot
 
+from cfg_parsing import adjust_file
 import networkx as nx
 from networkx.readwrite import json_graph
 import json
@@ -19,12 +20,13 @@ projects = ["xen"]
 def convert_dot_to_json(project):
     project_dir = os.path.join(base_dot_directory, project)
     wrong_files = []
-    for directory in os.listdir(project_dir):
+    for directory in os.listdir(project_dir)[0:1]:
         print(directory)
         files = os.listdir(os.path.join(project_dir, directory))
-        for filename in files[0:1]:
+        for filename in files:
             try:
                 dot_filepath = os.path.join(project_dir, directory, filename)
+                adjust_file(dot_filepath)
                 dot_graph = nx.nx_pydot.read_dot(dot_filepath)
                 print(json.dumps(json_graph.node_link_data(dot_graph)))
             except TypeError:
