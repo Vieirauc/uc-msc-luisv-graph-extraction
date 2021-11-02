@@ -56,6 +56,7 @@ def map_functions_to_cfg(project):
     filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
     df = pd.read_csv(filepath)
 
+    csv_rows = []
     for index, row in df.iterrows():
         commit = row[VULNERABLE_COMMIT_HASH]
         filepath = row[FILE_PATH]
@@ -70,13 +71,21 @@ def map_functions_to_cfg(project):
             function_name_dot = read_graph(cfg_output_directory, cfg_file)
             map_function_name_cfgfile[function_name_dot] = cfg_file
 
-        print(map_function_name_cfgfile)
-
         functions = json.loads(row[VULNERABLE_FUNCTIONS])
         for function in functions:
             # print(row["File Path"], function["Name"], function["Vulnerable"])
             function_name = function["Name"] # TODO it should be used to select the function in the map
             vulnerable = function["Vulnerable"] == "Yes"
+
+            if function_name in map_function_name_cfgfile:
+                cfg_filepath = map_function_name_cfgfile[function_name]
+            else:
+                cfg_filepath = ""
+                print("Houston, we have a problem...")
+
+            csv_row = "{},{},{},{},{}".format(commit, filepath, function_name, cfg_filepath, vulnerable)
+            print(csv_row)
+            csv_rows.append(csv_row)
 
             # TODO still pending the creation of the CSV line
 
