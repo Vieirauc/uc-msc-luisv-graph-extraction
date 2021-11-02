@@ -51,7 +51,7 @@ def extract_cfg_per_file(base_output_directory, project, repository_path, commit
             print(subprocess.Popen(parse_command, shell=True, stdout=subprocess.PIPE).stdout.read())
 
             # Command to export the cfg
-            filepath_directory = filepath.replace("/", "---")
+            filepath_directory = filename.replace("/", "---")
             cfg_output_directory = os.path.join(output_directory, filepath_directory)
             parse_command = "joern-export --repr {} --out {}".format(graph_type, cfg_output_directory)
             print(subprocess.Popen(parse_command, shell=True, stdout=subprocess.PIPE).stdout.read())
