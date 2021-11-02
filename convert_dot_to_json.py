@@ -55,7 +55,6 @@ def map_functions_to_cfg(project):
     #     commit, filepath, function_name, CFG_filepath, vulnerable_label
     filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
     df = pd.read_csv(filepath)
-    df = df.sort_values(by=VULNERABLE_COMMIT_HASH)
 
     for index, row in df.iterrows():
         commit = row[VULNERABLE_COMMIT_HASH]
@@ -68,7 +67,9 @@ def map_functions_to_cfg(project):
 
         map_function_name_cfgfile = {}
         for cfg_file in os.listdir(cfg_output_directory):
-            map_function_name_cfgfile[read_graph(cfg_output_directory, cfg_file)] = cfg_file
+            adjust_file(os.path.join(cfg_output_directory, cfg_file))
+            function_name_dot = read_graph(cfg_output_directory, cfg_file)
+            map_function_name_cfgfile[function_name_dot] = cfg_file
 
         print(map_function_name_cfgfile)
 
