@@ -11,6 +11,7 @@ base_project_directory = "/home/zema-21/Projects/"
 commit_data_directory = "function-data"
 commit_data_mask = "{}-functions.csv"
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
+FILE_PATH = "File Path"
 
 base_output_directory = "/opt/josep"
 
@@ -24,6 +25,20 @@ def obtain_commits(project):
     commits = df[VULNERABLE_COMMIT_HASH].tolist()
     commits = list(set(commits))
     return commits
+
+
+def obtain_commits_files(project):
+    # each file of "commit_data_directory" (function-data) is in the GitHub from João Henggeler
+    # scripts/output/final/[PROJECT_NAME]/affected-files-[PROJECT_ID]-[PROJECT]-master-branch-[date].csv
+    # e.g., "scripts/output/final/mozilla/affected-files-1-mozilla-master-branch-20210401212440.csv"
+    filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
+    df = pd.read_csv(filepath)
+    commits = df[VULNERABLE_COMMIT_HASH].tolist()
+    commits = list(set(commits))
+    commits_files = {}
+    for commit in commits:
+        commits_files[commit] = df[df[VULNERABLE_COMMIT_HASH] == commit][FILE_PATH].tolist()
+    return commits_files
 
 
 def check_output_directory(base_output_directory, project):
@@ -50,8 +65,14 @@ def extract_cfg_per_commit(project, commits):
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
     for project in projects:
-        commits = obtain_commits(project)
-        extract_cfg_per_commit(project, commits)
+        if should_run_per_directory(project):
+            # Extract the CFG for the listed files only
+            commits_files = obtain_commits_files(project)
+            #extract_cfg_per_commit_file(project, commits_files)
+        else:
+            # Extract the CFG for all the files of the commit
+            commits = obtain_commits(project)
+            extract_cfg_per_commit(project, commits)
 
 
 if __name__ == "__main__":
