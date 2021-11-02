@@ -45,6 +45,7 @@ def extract_cfg_per_file(base_output_directory, project, repository_path, commit
 
     # If the directory exists, the parsing was already performed for that commit
     if not os.path.exists(output_directory):
+        os.mkdir(output_directory)
         for filename in files:
             filepath = os.path.join(repository_path, filename)
             parse_command = "joern-parse {}".format(filepath)
