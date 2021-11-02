@@ -1,4 +1,4 @@
-from cfg_extraction import extract_cfg
+from cfg_extraction import extract_cfg, extract_cfg_per_file
 from cfg_parsing import map_cfg_per_function
 from cfg_persistence import save_cfg
 import os
@@ -62,13 +62,24 @@ def extract_cfg_per_commit(project, commits):
         save_cfg()
 
 
+def extract_cfg_per_commit_file(project, commits_files):
+    repository_path = os.path.join(base_project_directory, project)
+    check_output_directory(base_output_directory, project)
+    for commit in commits_files:
+        load_commit(repository_path, commit)
+        cfg_directory = extract_cfg_per_file(base_output_directory, project,
+                                             repository_path, commit, commits_files[commit])
+        #map_cfg_per_function(cfg_directory)
+        #save_cfg()
+
+
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
     for project in projects:
         if should_run_per_directory(project):
             # Extract the CFG for the listed files only
             commits_files = obtain_commits_files(project)
-            #extract_cfg_per_commit_file(project, commits_files)
+            extract_cfg_per_commit_file(project, commits_files)
         else:
             # Extract the CFG for all the files of the commit
             commits = obtain_commits(project)
