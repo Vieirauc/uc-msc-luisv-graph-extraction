@@ -16,6 +16,7 @@ import pandas as pd
 
 base_dot_directory = "/opt/josep"
 commit_data_directory = "function-data"
+output_directory = "output-data"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 commit_data_mask = "{}-functions.csv"
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
@@ -46,12 +47,25 @@ def directory_per_file(project):
     return project in ["glibc", "gecko-dev", "linux"]
 
 
+def write_output_file(output_filename, rows):
+    header = 'commit,filepath,function_name,CFG_filepath,vulnerable_label\n'
+    output_filepath = os.path.join(output_directory, output_filename)
+
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory)
+
+    with open(output_filepath, 'w') as output_file:
+        output_file.write(header)
+        for row in rows:
+            output_file.write(row)
+
+
 def map_functions_to_cfg(project):
-    # TODO This function aims at
-    #  1) reading the DF of functions per project
-    #  2) iterating over the functions of a file in a commit
-    #  3) finding the corresponding CFG file (.dot) of the function
-    #  4) creating a CSV file with the output, with the following fields
+    # Goals of this function:
+    #  1) reads the DF of functions per project
+    #  2) iterates over the functions of a file in a commit
+    #  3) finds the corresponding CFG file (.dot) of the function
+    #  4) creates a CSV file with the output, with the following fields
     #     commit, filepath, function_name, CFG_filepath, vulnerable_label
     filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
     df = pd.read_csv(filepath)
@@ -97,9 +111,7 @@ def map_functions_to_cfg(project):
             print(csv_row)
             csv_rows.append(csv_row)
 
-            # TODO still pending the creation of the CSV line
-
-        return  # finishes the execution, just to test the mechanism
+    write_output_file("functions-cfg-{}.csv".format(project), csv_rows)
 
 
 def main():
