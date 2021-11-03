@@ -70,6 +70,9 @@ def map_functions_to_cfg(project):
     filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
     df = pd.read_csv(filepath)
 
+    # Filter the samples without vulnerable functions
+    df = df[df[VULNERABLE_FUNCTIONS].notnull()]
+
     csv_rows = []
     for index, row in df.iterrows():
         commit = row[VULNERABLE_COMMIT_HASH]
