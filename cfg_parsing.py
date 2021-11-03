@@ -30,9 +30,12 @@ def adjust_file(filepath):
 def read_graph(cfg_directory, filename):
     filepath = os.path.join(cfg_directory, filename)
     graphs = pydot.graph_from_dot_file(filepath)
+    print(filepath)
     if graphs is None:
         graphs = adjust_file(filepath)
         files_with_problems.append(filename)
+    if graphs is None:
+        return ""
     graph = graphs[0]
     print(filename, graph.get_name().replace('"', ''))
     return graph.get_name().replace('"', '')
