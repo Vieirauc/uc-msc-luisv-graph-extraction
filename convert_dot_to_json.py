@@ -101,9 +101,9 @@ def map_functions_to_cfg(project):
                 # only "AsyncConvertData" is present.
                 # So we need to find it regardless the scope operator.
                 function_in_map = ["::{}".format(function_name) in k for k in map_function_name_cfgfile.keys()]
-                key_index = function_in_map.index(True)
 
-                if key_index != -1:
+                if True in function_in_map:
+                    key_index = function_in_map.index(True)
                     complete_function_name = list(map_function_name_cfgfile.keys())[key_index]
                     cfg_filepath = map_function_name_cfgfile[complete_function_name]
                 else:
