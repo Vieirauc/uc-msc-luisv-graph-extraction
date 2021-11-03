@@ -73,15 +73,25 @@ def map_functions_to_cfg(project):
 
         functions = json.loads(row[VULNERABLE_FUNCTIONS])
         for function in functions:
-            # print(row["File Path"], function["Name"], function["Vulnerable"])
-            function_name = function["Name"] # TODO it should be used to select the function in the map
+            function_name = function["Name"]
             vulnerable = function["Vulnerable"] == "Yes"
 
             if function_name in map_function_name_cfgfile:
                 cfg_filepath = map_function_name_cfgfile[function_name]
             else:
-                cfg_filepath = ""
-                print("Houston, we have a problem...")
+                # some cases are not found due to the "scope resolution operator" (::)
+                # for instance, "nsIndexedToHTML::AsyncConvertData", but in the CSV file
+                # only "AsyncConvertData" is present.
+                # So we need to find it regardless the scope operator.
+                function_in_map = ["::{}".format(function_name) in k for k in map_function_name_cfgfile.keys()]
+                key_index = function_in_map.index(True)
+
+                if key_index != -1:
+                    complete_function_name = list(map_function_name_cfgfile.keys())[key_index]
+                    cfg_filepath = map_function_name_cfgfile[complete_function_name]
+                else:
+                    cfg_filepath = ""
+                    print("Houston, we have a problem...")
 
             csv_row = "{},{},{},{},{}".format(commit, filepath, function_name, cfg_filepath, vulnerable)
             print(csv_row)
