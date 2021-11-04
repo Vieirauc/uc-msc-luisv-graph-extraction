@@ -31,7 +31,13 @@ def read_graph(cfg_directory, filename):
     filepath = os.path.join(cfg_directory, filename)
     graphs = pydot.graph_from_dot_file(filepath)
     print(filepath)
+    return graphs
+
+
+def get_graph_name(cfg_directory, filename):
+    graphs = read_graph(cfg_directory, filename)
     if graphs is None:
+        filepath = os.path.join(cfg_directory, filename)
         graphs = adjust_file(filepath)
         files_with_problems.append(filename)
     if graphs is None:
@@ -47,7 +53,7 @@ def map_cfg_per_function(cfg_directory):
     files.sort()
     for filename in files:
         if filename.endswith(".dot"):
-            function_graph_name = read_graph(cfg_directory, filename)
+            function_graph_name = get_graph_name(cfg_directory, filename)
             map_cfg[function_graph_name] = filename
     #print("map_cfg ", map_cfg)
     print("len(map_cfg) ", len(map_cfg.keys()))

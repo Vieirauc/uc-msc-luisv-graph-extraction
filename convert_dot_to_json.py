@@ -7,7 +7,7 @@
 # Syntax :
 # python dot_to_json_graph.py graph.dot
 
-from cfg_parsing import adjust_file, read_graph
+from cfg_parsing import adjust_file, get_graph_name
 import networkx as nx
 from networkx.readwrite import json_graph
 import json
@@ -85,7 +85,7 @@ def map_functions_to_cfg(project):
 
         map_function_name_cfgfile = {}
         for cfg_file in os.listdir(cfg_output_directory):
-            function_name_dot = read_graph(cfg_output_directory, cfg_file)
+            function_name_dot = get_graph_name(cfg_output_directory, cfg_file)
             map_function_name_cfgfile[function_name_dot] = os.path.join(cfg_output_directory, cfg_file)
 
         functions = json.loads(row[VULNERABLE_FUNCTIONS])
