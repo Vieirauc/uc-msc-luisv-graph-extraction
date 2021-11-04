@@ -110,7 +110,7 @@ def map_functions_to_cfg(project):
                     cfg_filepath = ""
                     print("Houston, we have a problem...")
 
-            csv_row = "{},{},{},{},{}".format(commit, filepath, function_name, cfg_filepath, vulnerable)
+            csv_row = "{},{},{},{},{}\n".format(commit, filepath, function_name, cfg_filepath, vulnerable)
             print(csv_row)
             csv_rows.append(csv_row)
 
