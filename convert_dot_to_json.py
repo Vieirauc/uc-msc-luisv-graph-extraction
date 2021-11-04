@@ -86,7 +86,7 @@ def map_functions_to_cfg(project):
         map_function_name_cfgfile = {}
         for cfg_file in os.listdir(cfg_output_directory):
             function_name_dot = read_graph(cfg_output_directory, cfg_file)
-            map_function_name_cfgfile[function_name_dot] = cfg_file
+            map_function_name_cfgfile[function_name_dot] = os.path.join(cfg_output_directory, cfg_file)
 
         functions = json.loads(row[VULNERABLE_FUNCTIONS])
         for function in functions:
