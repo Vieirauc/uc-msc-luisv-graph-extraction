@@ -5,6 +5,11 @@ import numpy as np
 import os
 import pandas as pd
 
+import dgl
+import torch as th
+import torch.nn as nn
+from dgl.nn import SortPooling
+
 
 data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}-sample.csv"
@@ -95,6 +100,8 @@ def obtain_diagonal_matrix(A_tilde):
 
 
 def obtain_attribute_matrix(A):
+    # This is a matrix with node degrees. Other attributes can be used
+    # TODO Normalize this matrix
     X = np.zeros((A.shape[0], 2))
     for i in range(X.shape[0]):
         X[i][0] = np.sum(A[i, :])  # outdegree
@@ -103,26 +110,14 @@ def obtain_attribute_matrix(A):
     return X
 
 
-def new_main():
-    cfg_filepath = os.path.join("cfg-data", "6-cfg.dot")
-    graphs = read_graph(cfg_filepath)
-
-    if graphs is not None:
-        cfg_dot = graphs[0]
-        print(type(cfg_dot))
-        #s = Source(cfg_dot, filename="test.gv", format="pdf")
-        #s.view()
-        A = convert_graph_to_adjacency_matrix(cfg_dot)
-        X = obtain_attribute_matrix(A)
-        calculate_graph_convolution_layer(A, X)
-
-
 def calculate_graph_convolution_layer(A, X, t=1):
     I = obtain_identity(A)
     A_tilde = A + I
     print(A_tilde)
     D_tilde = obtain_diagonal_matrix(A_tilde)
     print(D_tilde)
+
+    # W: Trainable graph convolution parameters
     W1 = np.matrix([[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]])
     W2 = np.matrix([[0.0, 1.0, -2.0, 2.0], [1.0, 1.0, 7.0, -2.0], [1.0, 0.0, -1.0, 4.0]])
     W = [W1, W2]
@@ -138,9 +133,50 @@ def calculate_graph_convolution_layer(A, X, t=1):
     D_A_X = np.dot(D_A, X)
     print("D_A_X\n", D_A_X)
     Ztp1 = np.dot(D_A_X, W[t-1])
+
+    # f: nonlinear activation function (RELU)
     Ztp1 = np.maximum(Ztp1, 0.0)
     print("Ztp1\n", Ztp1, "\n", Ztp1.shape)
+
+    # Ztp is the output activation matrix
     return Ztp1
+
+
+def new_main():
+    cfg_filepath = os.path.join("cfg-data", "6-cfg.dot")
+    graphs = read_graph(cfg_filepath)
+
+    if graphs is not None:
+        cfg_dot = graphs[0]
+        print(type(cfg_dot))
+        #s = Source(cfg_dot, filename="test.gv", format="pdf")
+        #s.view()
+
+        # TODO what if we do a topological sorting?
+        A = convert_graph_to_adjacency_matrix(cfg_dot)
+        X = obtain_attribute_matrix(A)
+        calculate_graph_convolution_layer(A, X)
+
+        cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
+        graph = dgl.convert.from_networkx(cfg_nx)
+        print(type(graph))
+        print(graph)
+        sortpool = SortPooling(k=2)
+
+
+def obtain_graph_convolution_layers(A, X):
+    Z = []
+    max_t = 2
+    Zi_minus1 = X
+    for i in range(0, max_t):
+        Zi = calculate_graph_convolution_layer(A, Zi_minus1, t=i + 1)
+        Z.append(Zi)
+        Zi_minus1 = Zi
+    Z1_t = Z[0]
+    for i in range(0, max_t - 1):
+        Z1_t = np.concatenate((Z1_t, Z[i + 1]), axis=1)
+
+    return Z1_t
 
 
 def main():
@@ -152,10 +188,25 @@ def main():
                    [0.0, 0.0, 0.0, 0.0, 0.0]])
     print(type(A))
     X = np.matrix([[2.0, 3.0], [1.0, 5.0], [7.0, 4.0], [8.0, 9.0], [6.0, 1.0]])
-    Z1 = calculate_graph_convolution_layer(A, X)
-    Z2 = calculate_graph_convolution_layer(A, Z1, t=2)
-    Z1_2 = np.concatenate((Z1, Z2), axis=1)
-    print(Z1_2)
+    Z1_t = obtain_graph_convolution_layers(A, X)
+    print(Z1_t)
+
+    # Sample graph from Yan2019 paper
+    src_ids = th.tensor([i - 1 for i in [1, 1, 2, 3, 3]])
+    dst_ids = th.tensor([i - 1 for i in [2, 4, 3, 4, 5]])
+    g1 = dgl.graph((src_ids, dst_ids))
+
+    # O k aqui é o quantidade de vértices que serão utilizados.
+    # No artigo Zhang2018, o valor é definido como 60% dos grafos tendo mais de k vértices
+    sortpool = SortPooling(k=3)
+    g1_feat = th.from_numpy(Z1_t)
+    feats = sortpool(g1, g1_feat)
+    print("AdaptiveMaxPool1D")
+    m = nn.AdaptiveMaxPool1d(3) # THIS ALMOST WORK, BUT IT HAS A DIFFERENT STRIDE IN THE PAPER!
+    output = m(g1_feat)
+    print("output (AdaptiveMaxPool1d)\n", output)
+
+    print("feats (application of SortPooling)\n", feats)
     return
     for project in projects[2:3]:
         read_cfg_file(project)
