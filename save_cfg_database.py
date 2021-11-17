@@ -254,9 +254,10 @@ def extract_adaptive_max_pool(Z1_t_th):
 
 def main():
     graph, X, Z1_t = extract_data_from_file("cfg-data", "6-cfg.dot")
-    Z1_t_th = th.from_numpy(Z1_t)
-    extract_sortpooling_layer(graph, Z1_t_th)
-    extract_adaptive_max_pool(Z1_t_th)
+    if Z1_t is not None:
+        Z1_t_th = th.from_numpy(Z1_t)
+        extract_sortpooling_layer(graph, Z1_t_th)
+        extract_adaptive_max_pool(Z1_t_th)
 
 
     graph, X, Z1_t = obtain_sample_data()
