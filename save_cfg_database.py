@@ -34,7 +34,6 @@ CFG_FILE = "CFG_filepath"
 
 
 def get_node_type(label):
-    print(label)
     # remove the quotes and parenthesis
     node_type = label[2:-2]
     node_type = node_type[0:node_type.index(",")]
@@ -56,8 +55,6 @@ def convert_graph_to_adjacency_matrix(cfg_dot):
     node_types = obtain_node_types(cfg_dot)
 
     print(node_types)
-    print(cfg.nodes())
-    print(cfg.edges())
 
     #adjacency_matrix = nx.adjacency_matrix(cfg)
     #print(type(adjacency_matrix))
@@ -112,6 +109,7 @@ def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
     df = pd.read_csv(filepath)
 
+    node_types = set()
     for index, row in df.iterrows():
         cfg_filepath = row[CFG_FILE]
         graphs = read_graph(cfg_filepath)
@@ -119,6 +117,9 @@ def read_cfg_file(project):
         if graphs is not None:
             cfg = graphs[0]
             analyze_dot_cfg(cfg)
+            node_types = node_types | obtain_node_types(cfg)
+    print(node_types)
+    print(len(node_types))
 
 
 def obtain_identity(A):
@@ -178,23 +179,23 @@ def extract_data_from_file(cfg_directory, cfg_filename):
     graph, X, Z1_t = None, None, None
 
     cfg_filepath = os.path.join(cfg_directory, cfg_filename)
-    graphs = read_graph(cfg_filepath)
+    if os.path.exists(cfg_filepath):
+        graphs = read_graph(cfg_filepath)
 
-    if graphs is not None:
-        cfg_dot = graphs[0]
-        print(type(cfg_dot))
-        # s = Source(cfg_dot, filename="test.gv", format="pdf")
-        # s.view()
+        if graphs is not None:
+            cfg_dot = graphs[0]
+            # s = Source(cfg_dot, filename="test.gv", format="pdf")
+            # s.view()
 
-        # TODO what if we do a topological sorting?
-        A = convert_graph_to_adjacency_matrix(cfg_dot)
-        X = obtain_attribute_matrix(A)
+            # TODO what if we do a topological sorting?
+            A = convert_graph_to_adjacency_matrix(cfg_dot)
+            X = obtain_attribute_matrix(A)
 
-        Z1_t = obtain_graph_convolution_layers(A, X)
-        print("Z1:t of graph from file\n", Z1_t)
+            Z1_t = obtain_graph_convolution_layers(A, X)
+            print("Z1:t of graph from file\n", Z1_t)
 
-        cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
-        graph = dgl.convert.from_networkx(cfg_nx)
+            cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
+            graph = dgl.convert.from_networkx(cfg_nx)
     return graph, X, Z1_t
 
 
