@@ -19,18 +19,23 @@ CFG_FILE = "CFG_filepath"
 
 # The node types can be of the following types (according to Yan2019):
 # 1) Code Sequence:
-# -- # Numeric Constants: assignments in our case
+# -- # Numeric Constants: (assignments in our case)
 # -- # Transfer Instructions:
-# -- # Call Instructions:
-# -- # Arithmetic Instructions:
-# -- # Compare Instructions:
-# -- # Move Instructions: not considered
-# -- # Termination Instructions: return, exit
-# -- # Data Declaration Instructions: variable declaration
-# -- # Total Instructions: (not sure what would be the differece between it and the instructions in the vertex)
+# -- # Call Instructions: METHOD
+# -- # Arithmetic Instructions: <operator>.sizeOf, <operator>.cast, <operator>.subtraction, <operator>.division
+#                               <operator>.preDecrement, <operator>.minus, <operator>.addition, <operator>.preIncrement
+# -- # Compare Instructions: <operator>.equals, <operator>.lessThan, <operator>.logicalNot, <operator>.conditional,
+#                            <operator>.logicalOr, <operator>.logicalAnd, <operator>.greaterThan, <operator>.notEquals
+# -- # Move Instructions: (not considered)
+# -- # Termination Instructions: (return, exit), METHOD_RETURN, RETURN
+# -- # Data Declaration Instructions: (variable declaration), <operator>.new, <operator>.assignment
+# -- # Total Instructions: (not sure what would be the difference between it and the instructions in the vertex)
 # 2) Vertex Structure:
 # -- # Offspring (Degree)
 # -- # Instructions in the Vertex
+
+# <operator>.indirection, <operator>.addressOf
+# NS_LITERAL_CSTRING, NS_SUCCEEDED, NS_ENSURE_TRUE, NS_LITERAL_STRING, NS_ASSERTION, NS_FAILED
 
 
 def get_node_type(label):
@@ -41,12 +46,15 @@ def get_node_type(label):
 
 
 def obtain_node_types(cfg_dot):
-    node_types = []
+    node_types = {}
     for node in cfg_dot.get_nodes():
         print(node.get_name(), node.get_label())
-        node_types.append(get_node_type(node.get_label()))
+        node_type = get_node_type(node.get_label())
+        if node_type not in node_types:
+            node_types[node_type] = 1
+        else:
+            node_types[node_type] += 1
     print(node_types)
-    node_types = set(node_types)
     return node_types
 
 
@@ -109,7 +117,7 @@ def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
     df = pd.read_csv(filepath)
 
-    node_types = set()
+    node_types = {}
     for index, row in df.iterrows():
         cfg_filepath = row[CFG_FILE]
         graphs = read_graph(cfg_filepath)
@@ -117,7 +125,13 @@ def read_cfg_file(project):
         if graphs is not None:
             cfg = graphs[0]
             analyze_dot_cfg(cfg)
-            node_types = node_types | obtain_node_types(cfg)
+            cfg_node_types = obtain_node_types(cfg)
+            for cfg_node_type in cfg_node_types:
+                if cfg_node_type not in node_types:
+                    node_types[cfg_node_type] = cfg_node_types[cfg_node_type]
+                else:
+                    node_types[cfg_node_type] += cfg_node_types[cfg_node_type]
+    node_types = dict(sorted(node_types.items(), key=lambda item: item[1]))
     print(node_types)
     print(len(node_types))
 
