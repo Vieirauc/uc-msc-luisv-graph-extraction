@@ -17,11 +17,22 @@ projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
 
 
+def get_node_type(label):
+    print(label)
+    # remove the quotes and parenthesis
+    node_type = label[2:-2]
+    node_type = node_type[0:node_type.index(",")]
+    return node_type
+
+
 def convert_graph_to_adjacency_matrix(cfg_dot):
     cfg = nx.nx_pydot.from_pydot(cfg_dot)
+    node_types = []
     for node in cfg_dot.get_nodes():
         print(node.get_name(), node.get_label())
-    #print(type(cfg))
+        node_types.append(get_node_type(node.get_label()))
+    print(node_types)
+    print(set(node_types))
 
     print(cfg.nodes())
     print(cfg.edges())
@@ -198,8 +209,10 @@ def obtain_sample_data():
 
 
 def extract_sortpooling_layer(graph, Z1_t_th):
+    # https://docs.dgl.ai/en/0.6.x/api/python/nn.pytorch.html#sortpooling
     # O k aqui é o quantidade de vértices que serão utilizados.
     # No artigo Zhang2018, o valor é definido como 60% dos grafos tendo mais de k vértices
+    print("before_sortpooling\n", Z1_t_th)
     sortpool = SortPooling(k=3)
     sortpool_feats = sortpool(graph, Z1_t_th)
     print("sortpool_feats\n", sortpool_feats)
@@ -207,6 +220,9 @@ def extract_sortpooling_layer(graph, Z1_t_th):
 
 
 def extract_adaptive_max_pool(Z1_t_th):
+
+    # The adaptive max pooling allows having different kernel sizes according to the input,
+    # but the output always has the same dimensions.
     m = nn.AdaptiveMaxPool1d(3)  # THIS ALMOST WORK, BUT IT HAS A DIFFERENT STRIDE IN THE PAPER!
     amp = m(Z1_t_th)
     print("amp (AdaptiveMaxPool1d)\n", amp)
