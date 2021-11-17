@@ -17,6 +17,22 @@ projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
 
 
+# The node types can be of the following types (according to Yan2019):
+# 1) Code Sequence:
+# -- # Numeric Constants: assignments in our case
+# -- # Transfer Instructions:
+# -- # Call Instructions:
+# -- # Arithmetic Instructions:
+# -- # Compare Instructions:
+# -- # Move Instructions: not considered
+# -- # Termination Instructions: return, exit
+# -- # Data Declaration Instructions: variable declaration
+# -- # Total Instructions: (not sure what would be the differece between it and the instructions in the vertex)
+# 2) Vertex Structure:
+# -- # Offspring (Degree)
+# -- # Instructions in the Vertex
+
+
 def get_node_type(label):
     print(label)
     # remove the quotes and parenthesis
@@ -25,15 +41,21 @@ def get_node_type(label):
     return node_type
 
 
-def convert_graph_to_adjacency_matrix(cfg_dot):
-    cfg = nx.nx_pydot.from_pydot(cfg_dot)
+def obtain_node_types(cfg_dot):
     node_types = []
     for node in cfg_dot.get_nodes():
         print(node.get_name(), node.get_label())
         node_types.append(get_node_type(node.get_label()))
     print(node_types)
-    print(set(node_types))
+    node_types = set(node_types)
+    return node_types
 
+
+def convert_graph_to_adjacency_matrix(cfg_dot):
+    cfg = nx.nx_pydot.from_pydot(cfg_dot)
+    node_types = obtain_node_types(cfg_dot)
+
+    print(node_types)
     print(cfg.nodes())
     print(cfg.edges())
 
