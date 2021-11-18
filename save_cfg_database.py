@@ -15,6 +15,7 @@ data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}-sample.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
+LABEL = "vulnerable_label"
 
 # This is another interesting link to explain GCN (Graph Convolution Network):
 # https://towardsdatascience.com/how-to-do-deep-learning-on-graphs-with-graph-convolutional-networks-7d2250723780
@@ -101,29 +102,6 @@ def analyze_dot_cfg(cfg):
         print(edge.get_destination())
 
 
-def read_cfg_file(project):
-    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
-    df = pd.read_csv(filepath)
-
-    node_types = {}
-    for index, row in df.iterrows():
-        cfg_filepath = row[CFG_FILE]
-        graphs = read_graph(cfg_filepath)
-
-        if graphs is not None:
-            cfg = graphs[0]
-            analyze_dot_cfg(cfg)
-            cfg_node_types = obtain_node_types(cfg)
-            for cfg_node_type in cfg_node_types:
-                if cfg_node_type not in node_types:
-                    node_types[cfg_node_type] = cfg_node_types[cfg_node_type]
-                else:
-                    node_types[cfg_node_type] += cfg_node_types[cfg_node_type]
-    node_types = dict(sorted(node_types.items(), key=lambda item: item[1]))
-    print(node_types)
-    print(len(node_types))
-
-
 def obtain_identity(A):
     return np.identity(A.shape[0])
 
@@ -177,10 +155,58 @@ def calculate_graph_convolution_layer(A, X, t=1):
     return Ztp
 
 
+def read_cfg_file(project):
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
+    df = pd.read_csv(filepath)
+
+    node_types = {}
+    dataset_samples = []
+    for index, row in df.iterrows():
+        cfg_filepath = row[CFG_FILE]
+
+        A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath)
+
+        dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0]))
+
+        if index >= 10:
+            print("This is a sample of the dataset")
+            print(dataset_samples)
+            return
+
+        # TODO talvez daqui pra frente seja eliminado
+        graphs = read_graph(cfg_filepath)
+
+        if graphs is not None:
+            cfg = graphs[0]
+            analyze_dot_cfg(cfg)
+            cfg_node_types = obtain_node_types(cfg)
+            for cfg_node_type in cfg_node_types:
+                if cfg_node_type not in node_types:
+                    node_types[cfg_node_type] = cfg_node_types[cfg_node_type]
+                else:
+                    node_types[cfg_node_type] += cfg_node_types[cfg_node_type]
+    node_types = dict(sorted(node_types.items(), key=lambda item: item[1]))
+    print(node_types)
+    print(len(node_types))
+
+
 def extract_data_from_file(cfg_directory, cfg_filename):
     graph, X, Z1_t = None, None, None
 
     cfg_filepath = os.path.join(cfg_directory, cfg_filename)
+    A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath)
+
+    if A is not None:
+        Z1_t = obtain_graph_convolution_layers(A, X)
+        print("Z1:t of graph from file\n", Z1_t)
+
+        graph = dgl.convert.from_networkx(cfg_nx)
+        print("indegree", cfg_nx.in_degree())
+        print("outdegree", cfg_nx.out_degree())
+    return graph, X, Z1_t
+
+
+def obtain_cfg_data_structures(cfg_filepath):
     if os.path.exists(cfg_filepath):
         graphs = read_graph(cfg_filepath)
 
@@ -193,14 +219,7 @@ def extract_data_from_file(cfg_directory, cfg_filename):
             # TODO what if we do a topological sorting?
             A, node_order = convert_graph_to_adjacency_matrix(cfg_dot)
             X = obtain_attribute_matrix(cfg_nx, node_order)
-
-            Z1_t = obtain_graph_convolution_layers(A, X)
-            print("Z1:t of graph from file\n", Z1_t)
-
-            graph = dgl.convert.from_networkx(cfg_nx)
-            print("indegree", cfg_nx.in_degree())
-            print("outdegree", cfg_nx.out_degree())
-    return graph, X, Z1_t
+    return A, X, cfg_nx
 
 
 def obtain_graph_convolution_layers(A, X, max_t=2):
