@@ -16,6 +16,9 @@ file_cfg_data_mask = "functions-cfg-{}-sample.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
 
+# This is another interesting link to explain GCN (Graph Convolution Network):
+# https://towardsdatascience.com/how-to-do-deep-learning-on-graphs-with-graph-convolutional-networks-7d2250723780
+
 
 # The node types can be of the following types (according to Yan2019):
 # 1) Code Sequence:
@@ -35,7 +38,10 @@ CFG_FILE = "CFG_filepath"
 # -- # Instructions in the Vertex
 
 # <operator>.indirection, <operator>.addressOf
-# NS_LITERAL_CSTRING, NS_SUCCEEDED, NS_ENSURE_TRUE, NS_LITERAL_STRING, NS_ASSERTION, NS_FAILED
+# NS_LITERAL_CSTRING, NS_SUCCEEDED, NS_ENSURE_TRUE, NS_LITERAL_STRING, NS_ASSERTION, NS_FAILED, NS_ADDREF, UNKNOWN
+# pushBuffer.Append, getter_AddRefs, buffer.Append, getter_Copies
+
+# All items have 5 or more occurrences, or they are obviously a reserved node (total of 141 node types)
 
 
 def get_node_type(label):
@@ -78,7 +84,7 @@ def convert_graph_to_adjacency_matrix(cfg_dot):
     print(different_order_nodes)
     np_matrix = nx.to_numpy_matrix(cfg, nodelist=different_order_nodes)
     print(np_matrix)
-    return np_matrix
+    return np_matrix, different_order_nodes
 
 
 def analyze_dot_cfg(cfg):
@@ -147,13 +153,13 @@ def obtain_diagonal_matrix(A_tilde):
     return D
 
 
-def obtain_attribute_matrix(A):
+def obtain_attribute_matrix(cfg_nx, node_order):
     # This is a matrix with node degrees. Other attributes can be used
     # TODO Normalize this matrix
-    X = np.zeros((A.shape[0], 2))
+    X = np.zeros((len(node_order), 2))
     for i in range(X.shape[0]):
-        X[i][0] = np.sum(A[i, :])  # outdegree
-        X[i][1] = np.sum(A[:, i])  # indegree
+        X[i][0] = cfg_nx.out_degree(node_order[i])  # outdegree
+        X[i][1] = cfg_nx.in_degree(node_order[i])  # indegree
     return X
 
 
@@ -198,18 +204,20 @@ def extract_data_from_file(cfg_directory, cfg_filename):
 
         if graphs is not None:
             cfg_dot = graphs[0]
+            cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
             # s = Source(cfg_dot, filename="test.gv", format="pdf")
             # s.view()
 
             # TODO what if we do a topological sorting?
-            A = convert_graph_to_adjacency_matrix(cfg_dot)
-            X = obtain_attribute_matrix(A)
+            A, node_order = convert_graph_to_adjacency_matrix(cfg_dot)
+            X = obtain_attribute_matrix(cfg_nx, node_order)
 
             Z1_t = obtain_graph_convolution_layers(A, X)
             print("Z1:t of graph from file\n", Z1_t)
 
-            cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
             graph = dgl.convert.from_networkx(cfg_nx)
+            print("indegree", cfg_nx.in_degree())
+            print("outdegree", cfg_nx.out_degree())
     return graph, X, Z1_t
 
 
