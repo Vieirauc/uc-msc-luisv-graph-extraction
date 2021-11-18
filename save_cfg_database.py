@@ -167,7 +167,8 @@ def read_cfg_file(project):
 
         A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath)
 
-        dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0]))
+        if A is not None:
+            dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0]))
 
         if index >= 10:
             print("This is a sample of the dataset")
@@ -211,6 +212,7 @@ def extract_data_from_file(cfg_directory, cfg_filename):
 
 
 def obtain_cfg_data_structures(cfg_filepath):
+    A, X, cfg_nx = None, None, None
     if os.path.exists(cfg_filepath):
         graphs = read_graph(cfg_filepath)
 
@@ -221,8 +223,9 @@ def obtain_cfg_data_structures(cfg_filepath):
             # s.view()
 
             # TODO what if we do a topological sorting?
-            A, node_order = convert_graph_to_adjacency_matrix(cfg_dot)
-            X = obtain_attribute_matrix(cfg_nx, node_order)
+            if len(cfg_nx.nodes()) > 0:
+                A, node_order = convert_graph_to_adjacency_matrix(cfg_dot)
+                X = obtain_attribute_matrix(cfg_nx, node_order)
     return A, X, cfg_nx
 
 
