@@ -100,24 +100,6 @@ def analyze_dot_cfg(cfg):
         print(edge.get_source())
         print(edge.get_destination())
 
-    # all nodes should have the label "CFG_Node", but only the  entry node should have the label "Function"
-    # CREATE(e: CFG_Node:Function
-    # {name: '1000133', label: '(METHOD,nsIndexedToHTML::Create)'})
-
-    # additional properties that a function has
-    # {commit, filepath, function_name, vulnerable}
-
-    # Regular node
-    # CREATE (e:CFG_Node {name: '1000146', label:'(<operator>.new,new nsIndexedToHTML())'})
-
-    # Create relationship (the relationship type RELTYPE can be changed)
-    # MATCH
-    #   (a:CFG_Node),
-    #   (b:CFG_Node)
-    # WHERE a.name = '1000133' AND b.name = '1000146'
-    # CREATE (a)-[r:RELTYPE]->(b)
-    # RETURN type(r);
-
 
 def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
