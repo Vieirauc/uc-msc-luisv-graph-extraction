@@ -12,7 +12,7 @@ from dgl.nn import SortPooling
 
 
 data_directory = "output-data"
-file_cfg_data_mask = "functions-cfg-{}-sample.csv"
+file_cfg_data_mask = "functions-cfg-{}-new.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
 LABEL = "vulnerable_label"
@@ -158,6 +158,7 @@ def calculate_graph_convolution_layer(A, X, t=1):
 def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
     df = pd.read_csv(filepath)
+    df = df[df[CFG_FILE].notnull()]
 
     node_types = {}
     dataset_samples = []
@@ -185,8 +186,11 @@ def read_cfg_file(project):
                     node_types[cfg_node_type] = cfg_node_types[cfg_node_type]
                 else:
                     node_types[cfg_node_type] += cfg_node_types[cfg_node_type]
-    node_types = dict(sorted(node_types.items(), key=lambda item: item[1]))
+        print(index)
+    node_types = dict(sorted(node_types.items(), key=lambda item: item[1], reverse=True))
     print(node_types)
+    for item in node_types.items():
+        print(item)
     print(len(node_types))
 
 
@@ -288,7 +292,6 @@ def main():
     extract_sortpooling_layer(graph, Z1_t_th)
     extract_adaptive_max_pool(Z1_t_th)
 
-    return
     for project in projects[2:3]:
         read_cfg_file(project)
 

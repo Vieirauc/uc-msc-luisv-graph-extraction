@@ -75,7 +75,7 @@ def extract_cfg_per_commit_file(project, commits_files):
 
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
-    for project in projects:
+    for project in projects[1:2]:
         if should_run_per_directory(project):
             # Extract the CFG for the listed files only
             commits_files = obtain_commits_files(project)
