@@ -16,6 +16,7 @@ file_cfg_data_mask = "functions-cfg-{}.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
 LABEL = "vulnerable_label"
+cfg_dataset_directory = "output-cfg-dataset"
 
 # This is another interesting link to explain GCN (Graph Convolution Network):
 # https://towardsdatascience.com/how-to-do-deep-learning-on-graphs-with-graph-convolutional-networks-7d2250723780
@@ -155,6 +156,24 @@ def calculate_graph_convolution_layer(A, X, t=1):
     return Ztp
 
 
+def check_output_file_exists(project):
+    if not os.path.exists(cfg_dataset_directory):
+        os.makedirs(cfg_dataset_directory)
+    cfg_dataset_filepath = os.path.join(cfg_dataset_directory, "cfg-dataset-{}.csv".format(project))
+    if not os.path.exists(cfg_dataset_filepath):
+        with open(cfg_dataset_filepath, 'w') as output_file:
+            output_file.write()
+    return cfg_dataset_filepath
+
+
+def write_cfgs_to_file(project, dataset_samples):
+    cfg_dataset_filepath = check_output_file_exists(project)
+    with open(cfg_dataset_filepath, 'w+') as output_file:
+        for sample in dataset_samples:
+            output_file.write("{},{},{},{}\n".format(sample[0], sample[1], sample[2], sample[2]))
+    dataset_samples.clear()
+
+
 def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
     df = pd.read_csv(filepath)
@@ -172,8 +191,7 @@ def read_cfg_file(project):
 
         if index >= 10:
             print("This is a sample of the dataset")
-            for sample in dataset_samples:
-                print(sample)
+            write_cfgs_to_file(project, dataset_samples)
             return
 
         # TODO talvez daqui pra frente seja eliminado
@@ -189,6 +207,8 @@ def read_cfg_file(project):
                 else:
                     node_types[cfg_node_type] += cfg_node_types[cfg_node_type]
         print(index)
+
+    write_cfgs_to_file(project, dataset_samples)
     node_types = dict(sorted(node_types.items(), key=lambda item: item[1], reverse=True))
     print(node_types)
     for item in node_types.items():
