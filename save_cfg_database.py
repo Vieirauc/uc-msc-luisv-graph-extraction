@@ -12,7 +12,7 @@ from dgl.nn import SortPooling
 
 
 data_directory = "output-data"
-file_cfg_data_mask = "functions-cfg-{}-new.csv"
+file_cfg_data_mask = "functions-cfg-{}.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
 LABEL = "vulnerable_label"
@@ -168,11 +168,12 @@ def read_cfg_file(project):
         A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath)
 
         if A is not None:
-            dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0]))
+            dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0], list(A.getA1())))
 
         if index >= 10:
             print("This is a sample of the dataset")
-            print(dataset_samples)
+            for sample in dataset_samples:
+                print(sample)
             return
 
         # TODO talvez daqui pra frente seja eliminado
@@ -295,7 +296,7 @@ def main():
     extract_sortpooling_layer(graph, Z1_t_th)
     extract_adaptive_max_pool(Z1_t_th)
 
-    for project in projects[2:3]:
+    for project in projects[2:4]:
         read_cfg_file(project)
 
 
