@@ -5,9 +5,34 @@ import networkx as nx
 import os
 
 cfg_directory = "cfg-data"
+statements_cfg_folder = "statements-cfg-output"
+reduced_cfg_folder = "reduced-cfg-output"
 
 
-def reduce_graph(cfg_dot):
+def write_statement_file(cfg_name, node_statements):
+    if not os.path.exists(statements_cfg_folder):
+        os.makedirs(statements_cfg_folder)
+
+    statements_filename = os.path.join(statements_cfg_folder, "{}.txt".format(cfg_name))
+    with open(statements_filename, 'w') as output_file:
+        for node in node_statements:
+            output_file.write("{} {}\n".format(node, [label[1:-1] for label in node_statements[node]]))
+
+        # to read the string list, we need to use "ast"
+        # import ast
+        # str_list  = ['(RETURN,return rv;,return rv;)']
+        # l = ast.literal_eval(str_list)
+
+
+def write_dot_file(cfg_name, cfg_nx_merged):
+    if not os.path.exists(reduced_cfg_folder):
+        os.makedirs(reduced_cfg_folder)
+
+    cfg_filename = os.path.join(reduced_cfg_folder, "{}.dot".format(cfg_name))
+    nx.drawing.nx_pydot.write_dot(cfg_nx_merged, cfg_filename)
+
+
+def reduce_graph(cfg_dot, cfg_name):
     print(cfg_dot)
     cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
     print(cfg_nx)
@@ -31,7 +56,6 @@ def reduce_graph(cfg_dot):
             # node should be kept in the graph
             to_be_kept_in_graph.append(node)
     nodes_to_be_removed = [node for node in potentially_to_be_removed if node not in to_be_kept_in_graph]
-    print("nodes_to_be_removed", nodes_to_be_removed)
 
     s = Source(cfg_dot, filename="output-cfg-images/0-initial-graph.gv", format="pdf")
     s.view()
@@ -39,8 +63,8 @@ def reduce_graph(cfg_dot):
     for node in nodes_to_be_removed:
         cfg_dot.get_node('"{}"'.format(node))[0].set_color("blue")
 
-    s = Source(cfg_dot, filename="output-cfg-images/1-nodes-highlighted.gv", format="pdf")
-    s.view()
+    #s = Source(cfg_dot, filename="output-cfg-images/1-nodes-highlighted.gv", format="pdf")
+    #s.view()
 
     all_nodes = cfg_nx.nodes
     all_edges = cfg_nx.edges
@@ -52,10 +76,9 @@ def reduce_graph(cfg_dot):
     for edge in all_edges:
         cfg_nx_new.add_edge(edge[0], edge[1])
 
-    cfg_dot_new = nx.nx_pydot.to_pydot(cfg_nx_new)
-
-    s = Source(cfg_dot_new, filename="output-cfg-images/2-all-nodes.gv", format="pdf")
-    s.view()
+    #cfg_dot_new = nx.nx_pydot.to_pydot(cfg_nx_new)
+    #s = Source(cfg_dot_new, filename="output-cfg-images/2-all-nodes.gv", format="pdf")
+    #s.view()
 
     # It will now merge the nodes
     nodes_to_be_added = {node: [node] for node in all_nodes if node not in nodes_to_be_removed}
@@ -85,34 +108,47 @@ def reduce_graph(cfg_dot):
 
         nodes_to_be_removed = nodes_to_be_merged
 
-    cfg_nx_merged = nx.MultiDiGraph()
-    for node in nodes_to_be_added:
-        cfg_nx_merged.add_node("-".join(nodes_to_be_added[node]))
+    cfg_nx_merged = nx.MultiDiGraph(name=cfg_dot.get_name().replace('"', ''))
 
+    # Adds the nodes for the new merged graph
+    node_statements = {}
+    for node in nodes_to_be_added:
+        node_label = "-".join(nodes_to_be_added[node])
+        cfg_nx_merged.add_node(node_label)
+        node_statements[node_label] = [cfg_dot.get_node('"{}"'.format(added_node_label))[0].get_label()
+                                       for added_node_label in nodes_to_be_added[node]]
+
+    # Prepares the new labels of each node (we need to find the corresponding new node)
+    # (This could be optimized somehow)
     new_labels = {}
     for node in all_nodes:
         for new_node in nodes_to_be_added:
             if node in nodes_to_be_added[new_node]:
                 new_labels[node] = "-".join(nodes_to_be_added[new_node])
 
+    # Adds the edges for the new merged graph
     for edge in all_edges:
         if new_labels[edge[0]] != new_labels[edge[1]]:
             cfg_nx_merged.add_edge(new_labels[edge[0]], new_labels[edge[1]])
 
     cfg_dot_merged = nx.nx_pydot.to_pydot(cfg_nx_merged)
-
     s = Source(cfg_dot_merged, filename="output-cfg-images/3-merged-nodes.gv", format="pdf")
     s.view()
 
+    write_dot_file(cfg_name, cfg_nx_merged)
+    write_statement_file(cfg_name, node_statements)
+
 
 def main():
-    cfg_filename = "6-cfg.dot"
+    cfg_name = "5-cfg"
+    cfg_name = "6-cfg"
+    cfg_filename = "{}.dot".format(cfg_name)
     cfg_filepath = os.path.join(cfg_directory, cfg_filename)
 
     graphs = read_graph(cfg_filepath)
     if graphs is not None:
         cfg_dot = graphs[0]
-        reduce_graph(cfg_dot)
+        reduce_graph(cfg_dot, cfg_name)
 
 
 if __name__ == "__main__":
