@@ -18,11 +18,6 @@ def write_statement_file(cfg_name, node_statements):
         for node in node_statements:
             output_file.write("{} {}\n".format(node, [label[1:-1] for label in node_statements[node]]))
 
-        # to read the string list, we need to use "ast"
-        # import ast
-        # str_list  = ['(RETURN,return rv;,return rv;)']
-        # l = ast.literal_eval(str_list)
-
 
 def write_dot_file(cfg_name, cfg_nx_merged):
     if not os.path.exists(reduced_cfg_folder):
