@@ -2,8 +2,11 @@ import ast
 import os
 import networkx as nx
 import numpy as np
+import pandas as pd
 
+from cfg_extraction_constants import REDUCED_CFG_FILE, STATEMENTS_FILE, LABEL
 from cfg_parsing import read_graph
+from save_cfg_features import write_cfgs_to_file
 
 
 # This is another interesting link to explain GCN (Graph Convolution Network):
@@ -36,6 +39,10 @@ from cfg_parsing import read_graph
 statements_cfg_folder = "statements-cfg-output"
 reduced_cfg_folder = "reduced-cfg-output"
 
+data_directory = "output-reduced-cfg-data"
+file_cfg_data_mask = "functions-{}-reduced-cfg-sample.csv"
+projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
+
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
     A, X, cfg_nx = None, None, None
@@ -57,9 +64,9 @@ def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
 
 def convert_graph_to_adjacency_matrix(cfg_dot):
     cfg = nx.nx_pydot.from_pydot(cfg_dot)
-    node_types = obtain_node_types(cfg_dot)
+    #node_types = obtain_node_types(cfg_dot)
 
-    print(node_types)
+    #print(node_types)
 
     #adjacency_matrix = nx.adjacency_matrix(cfg)
     #print(type(adjacency_matrix))
@@ -72,9 +79,9 @@ def convert_graph_to_adjacency_matrix(cfg_dot):
     different_order_nodes = list(cfg.nodes())
     head = different_order_nodes.pop(-2)
     different_order_nodes.insert(0, head)
-    print(different_order_nodes)
+    #print(different_order_nodes)
     np_matrix = nx.to_numpy_matrix(cfg, nodelist=different_order_nodes)
-    print(np_matrix)
+    #print(np_matrix)
     return np_matrix, different_order_nodes
 
 
@@ -141,14 +148,39 @@ def obtain_node_types(cfg_dot):
     return node_types
 
 
+def read_cfg_file(project):
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
+    df = pd.read_csv(filepath)
+    df = df[df[REDUCED_CFG_FILE].notnull()]
+
+    dataset_samples = []
+    for index, row in df.iterrows():
+        cfg_filepath = row[REDUCED_CFG_FILE]
+        statements_filepath = row[STATEMENTS_FILE]
+
+        A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath, statements_filepath)
+
+        if A is not None:
+            dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0], list(A.getA1().flatten()), list(X.flatten())))
+
+        if (index + 1) % 10 == 0:
+            write_cfgs_to_file(project, dataset_samples)
+
+    write_cfgs_to_file(project, dataset_samples)
+
+
 def main():
+    # This is just a sample for the feature extraction of the reduced CFG already
     cfg_name = "6-cfg"
     cfg_filepath = os.path.join(reduced_cfg_folder, "{}.dot".format(cfg_name))
     statements_filepath = os.path.join(statements_cfg_folder, "{}.txt".format(cfg_name))
 
     A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath, statements_filepath)
-    print(A)
-    print(X)
+    #print(A)
+    #print(X)
+
+    for project in projects[2:3]:
+        read_cfg_file(project)
 
 
 if __name__ == "__main__":

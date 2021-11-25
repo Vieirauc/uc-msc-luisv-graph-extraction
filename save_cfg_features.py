@@ -18,5 +18,5 @@ def check_output_file_exists(project):
     cfg_dataset_filepath = os.path.join(cfg_dataset_directory, "cfg-dataset-{}.csv".format(project))
     if not os.path.exists(cfg_dataset_filepath):
         with open(cfg_dataset_filepath, 'w') as output_file:
-            output_file.write("cfg_filepath,label,size,adjacency_matrix,feature_matrix\n")
+            output_file.write("cfg_filepath;label;size;adjacency_matrix;feature_matrix\n")
     return cfg_dataset_filepath
