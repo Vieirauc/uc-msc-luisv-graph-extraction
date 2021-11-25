@@ -22,7 +22,6 @@ def read_cfg_file(project):
 
     for index, row in df.iterrows():
         cfg_filepath = row[CFG_FILE]
-        print(cfg_filepath)
 
         cfg_filepath_parts = cfg_filepath.split("/")
         cfg_filename = cfg_filepath_parts[-1]
@@ -35,23 +34,20 @@ def read_cfg_file(project):
 
         if graphs is not None:
             cfg_dot = graphs[0]
-            cfg_nx_merged, node_statements = reduce_graph(cfg_dot, True)
+            cfg_nx_merged, node_statements = reduce_graph(cfg_dot)
 
             output_reduced_directory = check_created_directory(
-                base_directory, "{}-reduced", output_commit, repository_directory)
+                base_directory, "{}-reduced".format(project), output_commit, repository_directory)
             output_statements_directory = check_created_directory(
-                base_directory, "{}-statements", output_commit, repository_directory)
+                base_directory, "{}-statements".format(project), output_commit, repository_directory)
 
             write_dot_file(output_reduced_directory, cfg_name, cfg_nx_merged)
             write_statement_file(output_statements_directory, cfg_name, node_statements)
 
-        if index == 10:
-            return
-
 
 def check_created_directory(base_directory, type_directory, output_commit, repository_directory):
     output_directory = os.path.join(base_directory, type_directory, output_commit, repository_directory)
-    if not os.path.exists:
+    if not os.path.exists(output_directory):
         os.makedirs(output_directory)
     return output_directory
 
