@@ -9,13 +9,13 @@ import torch as th
 import torch.nn as nn
 from dgl.nn import SortPooling
 
+from save_cfg_features import write_cfgs_to_file
 
 data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 CFG_FILE = "CFG_filepath"
 LABEL = "vulnerable_label"
-cfg_dataset_directory = "output-cfg-dataset"
 
 
 def analyze_dot_cfg(cfg):
@@ -75,24 +75,6 @@ def calculate_graph_convolution_layer(A, X, t=1):
     return Ztp
 
 
-def check_output_file_exists(project):
-    if not os.path.exists(cfg_dataset_directory):
-        os.makedirs(cfg_dataset_directory)
-    cfg_dataset_filepath = os.path.join(cfg_dataset_directory, "cfg-dataset-{}.csv".format(project))
-    if not os.path.exists(cfg_dataset_filepath):
-        with open(cfg_dataset_filepath, 'w') as output_file:
-            output_file.write("cfg_filepath,label,size,adjacency_matrix\n")
-    return cfg_dataset_filepath
-
-
-def write_cfgs_to_file(project, dataset_samples):
-    cfg_dataset_filepath = check_output_file_exists(project)
-    with open(cfg_dataset_filepath, 'a') as output_file:
-        for sample in dataset_samples:
-            output_file.write("{};{};{};{}\n".format(sample[0], sample[1], sample[2], sample[3]))
-    dataset_samples.clear()
-
-
 def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
     df = pd.read_csv(filepath)
@@ -106,7 +88,7 @@ def read_cfg_file(project):
         A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath)
 
         if A is not None:
-            dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0], list(A.getA1())))
+            dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0], list(A.getA1()), list(X.getA1())))
 
         if (index + 1) % 10 == 0:
             write_cfgs_to_file(project, dataset_samples)
