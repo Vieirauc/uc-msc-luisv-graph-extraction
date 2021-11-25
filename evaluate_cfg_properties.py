@@ -1,3 +1,4 @@
+from cfg_extraction_constants import CFG_FILE, LABEL
 from cfg_feature_extraction import obtain_cfg_data_structures, obtain_node_types
 from cfg_parsing import read_graph
 import numpy as np
@@ -14,8 +15,6 @@ from save_cfg_features import write_cfgs_to_file
 data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
-CFG_FILE = "CFG_filepath"
-LABEL = "vulnerable_label"
 
 
 def analyze_dot_cfg(cfg):
