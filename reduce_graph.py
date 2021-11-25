@@ -9,51 +9,46 @@ statements_cfg_folder = "statements-cfg-output"
 reduced_cfg_folder = "reduced-cfg-output"
 
 
-def write_statement_file(cfg_name, node_statements):
-    if not os.path.exists(statements_cfg_folder):
-        os.makedirs(statements_cfg_folder)
-
-    statements_filename = os.path.join(statements_cfg_folder, "{}.txt".format(cfg_name))
+def write_statement_file(statements_cfg_directory, cfg_name, node_statements):
+    statements_filename = os.path.join(statements_cfg_directory, "{}.txt".format(cfg_name))
     with open(statements_filename, 'w') as output_file:
         for node in node_statements:
             output_file.write("{} {}\n".format(node, [label[1:-1] for label in node_statements[node]]))
 
 
-def write_dot_file(cfg_name, cfg_nx_merged):
-    if not os.path.exists(reduced_cfg_folder):
-        os.makedirs(reduced_cfg_folder)
-
-    cfg_filename = os.path.join(reduced_cfg_folder, "{}.dot".format(cfg_name))
+def write_dot_file(reduced_cfg_directory, cfg_name, cfg_nx_merged):
+    cfg_filename = os.path.join(reduced_cfg_directory, "{}.dot".format(cfg_name))
     nx.drawing.nx_pydot.write_dot(cfg_nx_merged, cfg_filename)
 
 
-def reduce_graph(cfg_dot, cfg_name):
-    print(cfg_dot)
+def reduce_graph(cfg_dot, show_graph=False):
+    #print(cfg_dot)
     cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
-    print(cfg_nx)
-    print("indegree", cfg_nx.in_degree())
-    print("outdegree", cfg_nx.out_degree())
+    #print(cfg_nx)
+    #print("indegree", cfg_nx.in_degree())
+    #print("outdegree", cfg_nx.out_degree())
 
     indegree_1 = [node for (node, indegree) in cfg_nx.in_degree() if indegree == 1]
     outdegree_1 = [node for (node, outdegree) in cfg_nx.out_degree() if outdegree == 1]
 
-    print("indegree1 ({}): {}".format(len(indegree_1), indegree_1))
-    print("outdegree1 ({}): {}".format(len(outdegree_1), outdegree_1))
+    #print("indegree1 ({}): {}".format(len(indegree_1), indegree_1))
+    #print("outdegree1 ({}): {}".format(len(outdegree_1), outdegree_1))
 
     potentially_to_be_removed = [node for node in indegree_1 if node in outdegree_1]
-    print("potentially_to_be_removed ({}): {}".format(len(potentially_to_be_removed), potentially_to_be_removed))
+    #print("potentially_to_be_removed ({}): {}".format(len(potentially_to_be_removed), potentially_to_be_removed))
 
     to_be_kept_in_graph = []
     for node in potentially_to_be_removed:
         predecessor = [pred for pred in cfg_nx.nodes if node in cfg_nx[pred]][0]
-        print("node", node, "predecessor", predecessor)
+        #print("node", node, "predecessor", predecessor)
         if cfg_nx.out_degree[predecessor] > 1:
             # node should be kept in the graph
             to_be_kept_in_graph.append(node)
     nodes_to_be_removed = [node for node in potentially_to_be_removed if node not in to_be_kept_in_graph]
 
-    s = Source(cfg_dot, filename="output-cfg-images/0-initial-graph.gv", format="pdf")
-    s.view()
+    if show_graph:
+        s = Source(cfg_dot, filename="output-cfg-images/0-initial-graph.gv", format="pdf")
+        s.view()
 
     for node in nodes_to_be_removed:
         cfg_dot.get_node('"{}"'.format(node))[0].set_color("blue")
@@ -126,12 +121,17 @@ def reduce_graph(cfg_dot, cfg_name):
         if new_labels[edge[0]] != new_labels[edge[1]]:
             cfg_nx_merged.add_edge(new_labels[edge[0]], new_labels[edge[1]])
 
-    cfg_dot_merged = nx.nx_pydot.to_pydot(cfg_nx_merged)
-    s = Source(cfg_dot_merged, filename="output-cfg-images/3-merged-nodes.gv", format="pdf")
-    s.view()
+    if show_graph:
+        cfg_dot_merged = nx.nx_pydot.to_pydot(cfg_nx_merged)
+        s = Source(cfg_dot_merged, filename="output-cfg-images/3-merged-nodes.gv", format="pdf")
+        s.view()
 
-    write_dot_file(cfg_name, cfg_nx_merged)
-    write_statement_file(cfg_name, node_statements)
+    return cfg_nx_merged, node_statements
+
+
+def check_directory_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 
 def main():
@@ -143,7 +143,13 @@ def main():
     graphs = read_graph(cfg_filepath)
     if graphs is not None:
         cfg_dot = graphs[0]
-        reduce_graph(cfg_dot, cfg_name)
+        cfg_nx_merged, node_statements = reduce_graph(cfg_dot, True)
+
+        check_directory_exists(reduced_cfg_folder)
+        check_directory_exists(statements_cfg_folder)
+
+        write_dot_file(reduced_cfg_folder, cfg_name, cfg_nx_merged)
+        write_statement_file(statements_cfg_folder, cfg_name, node_statements)
 
 
 if __name__ == "__main__":
