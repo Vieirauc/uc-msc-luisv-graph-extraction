@@ -39,8 +39,8 @@ from save_cfg_features import write_cfgs_to_file
 statements_cfg_folder = "statements-cfg-output"
 reduced_cfg_folder = "reduced-cfg-output"
 
-data_directory = "output-reduced-cfg-data"
-file_cfg_data_mask = "functions-{}-reduced-cfg-sample.csv"
+data_directory = "output-data"
+file_cfg_data_mask = "functions-cfg-{}.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 
 
