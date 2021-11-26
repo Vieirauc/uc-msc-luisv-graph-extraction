@@ -5,11 +5,6 @@ from cfg_extraction_constants import CFG_FILE
 from cfg_parsing import read_graph
 from reduce_graph import reduce_graph, write_dot_file, write_statement_file
 
-# It should run the CFG reduction and save a summary file with the following fields
-# commit,filepath,function_name,reduced_CFG_filepath,STATEMENTS_FILE,vulnerable_label
-
-# Some of the fields names are defined in the constant files
-
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}.csv"

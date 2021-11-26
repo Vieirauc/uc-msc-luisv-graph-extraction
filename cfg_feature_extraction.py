@@ -4,7 +4,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from cfg_extraction_constants import REDUCED_CFG_FILE, STATEMENTS_FILE, LABEL
+from cfg_extraction_constants import CFG_FILE, LABEL
 from cfg_parsing import read_graph
 from save_cfg_features import write_cfgs_to_file
 
@@ -148,20 +148,38 @@ def obtain_node_types(cfg_dot):
     return node_types
 
 
+def obtain_reduced_statement_filepath(cfg_filepath):
+    cfg_filepath_parts = cfg_filepath.split("/")
+
+    cfg_filename = cfg_filepath_parts[-1]
+    cfg_name = cfg_filename[:cfg_filename.index(".dot")]
+    repository_directory = cfg_filepath_parts[-2]
+    output_commit = cfg_filepath_parts[-3]
+    project = cfg_filepath_parts[-4]
+    base_directory = "/".join(cfg_filepath_parts[0:-4])
+
+    cfg_reduced_filepath = os.path.join(base_directory, "{}-reduced".format(project),
+                                        output_commit, repository_directory, "{}.dot".format(cfg_name))
+    statements_filepath = os.path.join(base_directory, "{}-statements".format(project),
+                                       output_commit, repository_directory, "{}.txt".format(cfg_name))
+    return cfg_reduced_filepath, statements_filepath
+
+
 def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
     df = pd.read_csv(filepath)
-    df = df[df[REDUCED_CFG_FILE].notnull()]
+    df = df[df[CFG_FILE].notnull()]
 
     dataset_samples = []
     for index, row in df.iterrows():
-        cfg_filepath = row[REDUCED_CFG_FILE]
-        statements_filepath = row[STATEMENTS_FILE]
+        cfg_filepath = row[CFG_FILE]
+        cfg_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(cfg_filepath)
 
-        A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath, statements_filepath)
+        A, X, cfg_nx = obtain_cfg_data_structures(cfg_reduced_filepath, statements_filepath)
 
         if A is not None:
-            dataset_samples.append((cfg_filepath, row[LABEL], A.shape[0], list(A.getA1().flatten()), list(X.flatten())))
+            dataset_samples.append((cfg_reduced_filepath, row[LABEL], A.shape[0],
+                                    list(A.getA1().flatten()), list(X.flatten())))
 
         if (index + 1) % 10 == 0:
             write_cfgs_to_file(project, dataset_samples)
