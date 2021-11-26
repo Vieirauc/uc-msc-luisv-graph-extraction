@@ -178,8 +178,12 @@ def read_cfg_file(project):
         A, X, cfg_nx = obtain_cfg_data_structures(cfg_reduced_filepath, statements_filepath)
 
         if A is not None:
+            adjacency_matrix = list(A.getA1().flatten())
+            adjacency_matrix = [int(a) for a in adjacency_matrix]
+            features = list(X.flatten())
+            features = [int(f) for f in features]
             dataset_samples.append((cfg_reduced_filepath, row[LABEL], A.shape[0],
-                                    list(A.getA1().flatten()), list(X.flatten())))
+                                    adjacency_matrix, features))
 
         if (index + 1) % 10 == 0:
             write_cfgs_to_file(project, dataset_samples)
