@@ -29,12 +29,9 @@ def reduce_graph(cfg_dot, show_graph=False):
     #print("outdegree", cfg_nx.out_degree())
 
     indegree_1 = [node for (node, indegree) in cfg_nx.in_degree() if indegree == 1]
-    outdegree_1 = [node for (node, outdegree) in cfg_nx.out_degree() if outdegree == 1]
+    outdegree_0_1 = [node for (node, outdegree) in cfg_nx.out_degree() if outdegree <= 1]
 
-    #print("indegree1 ({}): {}".format(len(indegree_1), indegree_1))
-    #print("outdegree1 ({}): {}".format(len(outdegree_1), outdegree_1))
-
-    potentially_to_be_removed = [node for node in indegree_1 if node in outdegree_1]
+    potentially_to_be_removed = [node for node in indegree_1 if node in outdegree_0_1]
     #print("potentially_to_be_removed ({}): {}".format(len(potentially_to_be_removed), potentially_to_be_removed))
 
     to_be_kept_in_graph = []
