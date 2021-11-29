@@ -77,8 +77,9 @@ def convert_graph_to_adjacency_matrix(cfg_dot):
     #print(cfg.nodes())
 
     different_order_nodes = list(cfg.nodes())
-    head = different_order_nodes.pop(-2)
-    different_order_nodes.insert(0, head)
+    if len(different_order_nodes) > 1:
+        head = different_order_nodes.pop(-2)
+        different_order_nodes.insert(0, head)
     #print(different_order_nodes)
     np_matrix = nx.to_numpy_matrix(cfg, nodelist=different_order_nodes)
     #print(np_matrix)
