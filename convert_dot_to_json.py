@@ -78,10 +78,10 @@ def map_functions_to_cfg(project):
         commit = row[VULNERABLE_COMMIT_HASH]
         filepath = row[FILE_PATH]
 
-        filepath_directory = filepath.replace("/", "---")
-        cfg_output_directory = os.path.join(base_dot_directory, project,
-                                            "output-{}-{}".format(graph_type, commit),
-                                            filepath_directory)
+        cfg_output_directory = os.path.join(base_dot_directory, project, "output-{}-{}".format(graph_type, commit))
+        if directory_per_file(project):
+            filepath_directory = filepath.replace("/", "---")
+            cfg_output_directory = os.path.join(cfg_output_directory, filepath_directory)
 
         map_function_name_cfgfile = {}
         for cfg_file in os.listdir(cfg_output_directory):
@@ -118,11 +118,12 @@ def map_functions_to_cfg(project):
 
 
 def main():
-    for project in projects[2:3]:
-        if directory_per_file(project):
-            map_functions_to_cfg(project)
-        else:
-            convert_dot_to_json(project)
+    for project in projects[0:1]:
+        #if directory_per_file(project):
+        #    map_functions_to_cfg(project)
+        #else:
+        #    convert_dot_to_json(project)
+        map_functions_to_cfg(project)
 
 
 if __name__ == "__main__":
