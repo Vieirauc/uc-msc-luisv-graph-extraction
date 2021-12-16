@@ -27,9 +27,10 @@ def adjust_file(filepath):
     return graphs
 
 
-def read_graph(filepath):
+def read_graph(filepath, print_filepath=True):
     graphs = pydot.graph_from_dot_file(filepath)
-    print(filepath)
+    if print_filepath:
+        print(filepath)
     return graphs
 
 
