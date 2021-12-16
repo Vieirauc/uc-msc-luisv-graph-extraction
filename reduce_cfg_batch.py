@@ -21,9 +21,17 @@ def read_cfg_file(project):
         cfg_filepath_parts = cfg_filepath.split("/")
         cfg_filename = cfg_filepath_parts[-1]
         cfg_name = cfg_filename[:cfg_filename.index(".dot")]
-        repository_directory = cfg_filepath_parts[-2]
-        output_commit = cfg_filepath_parts[-3]
-        base_directory = "/".join(cfg_filepath_parts[0:-4])
+
+        if project != "httpd":
+            repository_directory = cfg_filepath_parts[-2]
+            output_commit_index = -3
+            base_directory_max_index = -4
+        else:
+            repository_directory = ""
+            output_commit_index = -2
+            base_directory_max_index = -3
+        output_commit = cfg_filepath_parts[output_commit_index]
+        base_directory = "/".join(cfg_filepath_parts[0:base_directory_max_index])
 
         graphs = read_graph(cfg_filepath)
 
@@ -48,7 +56,7 @@ def check_created_directory(base_directory, type_directory, output_commit, repos
 
 
 def main():
-    for project in projects[2:3]:
+    for project in projects[0:1]:
         read_cfg_file(project)
 
 
