@@ -1,5 +1,6 @@
 from cfg_extraction_constants import CFG_FILE
 from cfg_parsing import read_graph
+from collections import Counter
 #import networkx as nx
 import os
 import pandas as pd
@@ -7,6 +8,24 @@ import pandas as pd
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}.csv"
+
+
+def analyze_property_two_edges(cfg_filepath):
+    graphs = read_graph(cfg_filepath)
+
+    if graphs is not None:
+        cfg_dot = graphs[0]
+        edges = [(edge.get_source(), edge.get_destination()) for edge in cfg_dot.get_edges()]
+
+        counts = Counter(edges)
+        duplicate_edges = [edge for edge in edges if counts[edge] > 1]
+        duplicate_edges = list(set(duplicate_edges))
+        for edge in duplicate_edges:
+            source = edge.get_source()
+            destination = edge.get_destination()
+            print(source, source.get_label())
+            print(destination, destination.get_label())
+        print("end of cfg")
 
 
 def analyze_double_edge(project):
@@ -50,6 +69,10 @@ def analyze_double_edge(project):
             if number_edges != number_unduplicated_edges:
                 print(reduced_cfg_path)
                 two_edges_nodes += 1
+
+                complete_cfg_path = os.path.join(
+                    base_directory, project, output_commit, repository_directory, cfg_filename)
+                analyze_property_two_edges(complete_cfg_path)
             total_cfgs += 1
     print("total_cfgs: {}, two_edge_nodes: {}".format(total_cfgs, two_edges_nodes))
 
