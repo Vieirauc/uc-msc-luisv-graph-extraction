@@ -9,6 +9,8 @@ projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}.csv"
 
+map_pairs = {}
+
 
 def analyze_property_two_edges(cfg_filepath):
     graphs = read_graph(cfg_filepath)
@@ -28,6 +30,17 @@ def analyze_property_two_edges(cfg_filepath):
             destination_label = cfg_dot.get_node('{}'.format(destination))[0].get_label()
             print(source, source_label)
             print(destination, destination_label)
+
+            source_node_type = source_label[2:-2]
+            source_node_type = source_node_type[0:source_node_type.index(",")]
+
+            destination_node_type = destination_label[2:-2]
+            destination_node_type = destination_node_type[0:destination_node_type.index(",")]
+
+            if (source_node_type, destination_node_type) not in map_pairs:
+                map_pairs[(source_node_type, destination_node_type)] = 0
+
+            map_pairs[(source_node_type, destination_node_type)] += 1
         print("end of cfg")
 
 
@@ -78,6 +91,9 @@ def analyze_double_edge(project):
                 analyze_property_two_edges(complete_cfg_path)
             total_cfgs += 1
     print("total_cfgs: {}, two_edge_nodes: {}".format(total_cfgs, two_edges_nodes))
+
+    for tuple_types in map_pairs.keys():
+        print(tuple_types, map_pairs[tuple_types])
 
     # gecko-dev
     # total_cfgs: 254160, two_edge_nodes: 20098 (7.91%)
