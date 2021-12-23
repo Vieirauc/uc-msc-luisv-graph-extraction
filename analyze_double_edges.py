@@ -21,10 +21,13 @@ def analyze_property_two_edges(cfg_filepath):
         duplicate_edges = [edge for edge in edges if counts[edge] > 1]
         duplicate_edges = list(set(duplicate_edges))
         for edge in duplicate_edges:
-            source = edge.get_source()
-            destination = edge.get_destination()
-            print(source, source.get_label())
-            print(destination, destination.get_label())
+            source = edge[0]
+            destination = edge[1]
+            print(source, destination)
+            source_label = cfg_dot.get_node('{}'.format(source))[0].get_label()
+            destination_label = cfg_dot.get_node('{}'.format(destination))[0].get_label()
+            print(source, source_label)
+            print(destination, destination_label)
         print("end of cfg")
 
 
@@ -56,7 +59,7 @@ def analyze_double_edge(project):
             base_directory, "{}-reduced".format(project), output_commit, repository_directory, cfg_filename)
         #print(reduced_cfg_path)
 
-        graphs = read_graph(reduced_cfg_path)
+        graphs = read_graph(reduced_cfg_path, print_filepath=False)
 
         if graphs is not None:
             cfg_dot = graphs[0]
@@ -67,7 +70,7 @@ def analyze_double_edge(project):
             number_edges = len(edges)
             number_unduplicated_edges = len(set(edges))
             if number_edges != number_unduplicated_edges:
-                print(reduced_cfg_path)
+                print("Two Edges: {}".format(reduced_cfg_path))
                 two_edges_nodes += 1
 
                 complete_cfg_path = os.path.join(
@@ -82,6 +85,8 @@ def analyze_double_edge(project):
     # linux
     # total_cfgs: 104760, two_edge_nodes: 14846 (14.17%)
 
+    # https
+    # total_cfgs: 1064, two_edge_nodes: 234
 
 
 def main():
