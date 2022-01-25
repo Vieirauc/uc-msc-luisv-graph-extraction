@@ -1,4 +1,5 @@
 import ast
+from collections import Counter
 import os
 import networkx as nx
 import numpy as np
@@ -42,6 +43,8 @@ reduced_cfg_folder = "reduced-cfg-output"
 data_directory = "output-data"
 file_cfg_data_mask = "functions-cfg-{}.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
+
+statement_types = []
 
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
@@ -100,6 +103,8 @@ def obtain_statements(statements_filepath):
         # to read the string list, we need to use "ast"
         # str_list  = ['(RETURN,return rv;,return rv;)']
         statements = ast.literal_eval(str_statements)
+        statement_type = [tp[1:tp.index(",")] for tp in statements]
+        statement_types.extend(statement_type)
 
         statement_count[node_label] = len(statements)
     return statement_count
@@ -204,6 +209,9 @@ def main():
 
     for project in projects[2:3]:
         read_cfg_file(project)
+
+        statement_type_count = Counter(statement_types)
+        print(statement_type_count)
 
 
 if __name__ == "__main__":
