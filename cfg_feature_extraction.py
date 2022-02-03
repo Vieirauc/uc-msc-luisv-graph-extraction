@@ -154,15 +154,22 @@ def obtain_node_types(cfg_dot):
     return node_types
 
 
-def obtain_reduced_statement_filepath(cfg_filepath):
+def obtain_reduced_statement_filepath(project, cfg_filepath):
     cfg_filepath_parts = cfg_filepath.split("/")
 
     cfg_filename = cfg_filepath_parts[-1]
     cfg_name = cfg_filename[:cfg_filename.index(".dot")]
-    repository_directory = cfg_filepath_parts[-2]
-    output_commit = cfg_filepath_parts[-3]
-    project = cfg_filepath_parts[-4]
-    base_directory = "/".join(cfg_filepath_parts[0:-4])
+    if project not in ["httpd"]:
+        repository_directory = cfg_filepath_parts[-2]
+        output_commit_index = -3
+        base_directory_max_index = -4
+    else:
+        repository_directory = ""
+        output_commit_index = -2
+        base_directory_max_index = -3
+
+    output_commit = cfg_filepath_parts[output_commit_index]
+    base_directory = "/".join(cfg_filepath_parts[0:base_directory_max_index])
 
     cfg_reduced_filepath = os.path.join(base_directory, "{}-reduced".format(project),
                                         output_commit, repository_directory, "{}.dot".format(cfg_name))
@@ -179,7 +186,7 @@ def read_cfg_file(project):
     dataset_samples = []
     for index, row in df.iterrows():
         cfg_filepath = row[CFG_FILE]
-        cfg_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(cfg_filepath)
+        cfg_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(project, cfg_filepath)
 
         A, X, cfg_nx = obtain_cfg_data_structures(cfg_reduced_filepath, statements_filepath)
 
@@ -211,7 +218,8 @@ def main():
         read_cfg_file(project)
 
         statement_type_count = Counter(statement_types)
-        print(statement_type_count)
+        for item in statement_type_count.most_common():
+            print(item)
 
 
 if __name__ == "__main__":
