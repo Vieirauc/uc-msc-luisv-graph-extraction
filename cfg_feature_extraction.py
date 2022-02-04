@@ -7,6 +7,7 @@ import pandas as pd
 
 from cfg_extraction_constants import CFG_FILE, LABEL
 from cfg_parsing import read_graph
+from feature_identifier_constants import *
 from save_cfg_features import write_cfgs_to_file
 
 
@@ -94,6 +95,7 @@ def obtain_statements(statements_filepath):
         node_statements = f.readlines()
 
     statement_count = {}
+    statements_node = {}
     for i in range(len(node_statements)):
         node = node_statements[i]
         space_index = node.index(" ")
@@ -107,28 +109,56 @@ def obtain_statements(statements_filepath):
         statement_types.extend(statement_type)
 
         statement_count[node_label] = len(statements)
-    return statement_count
+        statements_node[node_label] = statements
+    return statement_count, statements_node
+
+
+def get_node_type_id(statement_type):
+    if statement_type in statement_type_map:
+        return statement_type_map[statement_type]
+    else:
+        return -1
+
+
+def obtain_code_sequence_features(number_features_code_sequence, statements):
+    # creates the features based on the code sequence
+    X_code_sequence = np.zeros(number_features_code_sequence)
+    types = []
+    for statement in statements:
+        statement_type = statement[1:statement.index(",")]
+        types.append(statement_type)
+        node_type_id = get_node_type_id(statement_type)
+        if node_type_id != -1:
+            X_code_sequence[node_type_id] += 1
+    print(types)
+    return X_code_sequence
 
 
 def obtain_attribute_matrix(cfg_nx, node_order, statements_filepath):
     # This is a matrix with node degrees. Other attributes can be used
     # TODO Normalize this matrix
 
+    number_features_code_sequence = 8
+    number_features_vertex_structure = 3
+
     cfg_order = len(node_order)  # number of nodes in the CFG
     if statements_filepath is None:
-        statements = {node_label: 1 for node_label in node_order}
+        statements_count, statements_node = {node_label: 1 for node_label in node_order}, None
     else:
-        statements = obtain_statements(statements_filepath)
+        statements_count, statements_node = obtain_statements(statements_filepath)
 
-    X = np.zeros((cfg_order, 3))
+    X = np.zeros((cfg_order, number_features_vertex_structure + number_features_code_sequence))
     for i in range(X.shape[0]):
         X[i][0] = cfg_nx.out_degree(node_order[i])  # outdegree
         X[i][1] = cfg_nx.in_degree(node_order[i])  # indegree
-        X[i][2] = statements[node_order[i]]  # number of statements
+        X[i][2] = statements_count[node_order[i]]  # number of statements
+        X[i][number_features_vertex_structure:number_features_vertex_structure+number_features_code_sequence] = \
+            obtain_code_sequence_features(number_features_code_sequence, statements_node[node_order[i]])
 
     if statements_filepath is None:
         # removes the column with the number of statements per node
         X = np.delete(X, 2, 1)
+    print(X)
     return X
 
 
