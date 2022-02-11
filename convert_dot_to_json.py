@@ -48,7 +48,7 @@ def directory_per_file(project):
 
 
 def write_output_file(output_filename, rows):
-    header = 'commit,filepath,function_name,CFG_filepath,vulnerable_label\n'
+    header = 'commit;filepath;function_name;CFG_filepath;vulnerable_label\n'
     output_filepath = os.path.join(output_directory, output_filename)
 
     if not os.path.exists(output_directory):
@@ -110,7 +110,7 @@ def map_functions_to_cfg(project):
                     cfg_filepath = ""
                     print("Houston, we have a problem...")
 
-            csv_row = "{},{},{},{},{}\n".format(commit, filepath, function_name, cfg_filepath, vulnerable)
+            csv_row = "{};{};{};{};{}\n".format(commit, filepath, function_name, cfg_filepath, vulnerable)
             print(csv_row)
             csv_rows.append(csv_row)
 

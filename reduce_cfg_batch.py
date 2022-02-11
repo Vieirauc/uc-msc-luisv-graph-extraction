@@ -12,7 +12,7 @@ file_cfg_data_mask = "functions-cfg-{}.csv"
 
 def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
     for index, row in df.iterrows():
