@@ -210,7 +210,7 @@ def obtain_reduced_statement_filepath(project, cfg_filepath):
 
 def read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
     dataset_samples = []
