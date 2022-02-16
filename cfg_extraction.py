@@ -12,7 +12,7 @@ def obtain_directories(repository_path, run_per_directory):
 
 
 def extract_cfg(base_output_directory, project, repository_path, commit, run_per_directory=False):
-    # joern-parse [repository_path]
+    # joern-parse  --language c [repository_path]
     # joern-export --repr cfg --out [output_directory]
 
     graph_type = "cfg"
@@ -24,7 +24,7 @@ def extract_cfg(base_output_directory, project, repository_path, commit, run_per
         # Command to parse the source code
         for directory in obtain_directories(repository_path, run_per_directory):
             full_directory = os.path.join(repository_path, directory)
-            parse_command = "joern-parse {}".format(full_directory)
+            parse_command = "joern-parse  --language c {}".format(full_directory)
             print(subprocess.Popen(parse_command, shell=True, stdout=subprocess.PIPE).stdout.read())
 
             # Command to export the cfg
