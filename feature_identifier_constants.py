@@ -8,6 +8,10 @@ MOV_INSTRUCTION = 5
 TERMINATION_INSTRUCTION = 6
 DATA_DECLARATION_INSTRUCTION = 7
 
+# memory management functions
+ALLOCATION_FUNCTIONS = 0
+DEALLOCATION_FUNCTIONS = 1
+
 statement_type_map = {
     "<operator>.addition": ARITHMETIC_INSTRUCTION,
     "<operator>.addressOf": TRANSFER_INSTRUCTION,
