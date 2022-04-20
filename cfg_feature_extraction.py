@@ -134,12 +134,58 @@ def obtain_code_sequence_features(number_features_code_sequence, statements):
     return X_code_sequence
 
 
+def count_allocation_functions(statement):
+    allocation_functions_list = ["malloc", "calloc", "realloc", "new"]
+    count_functions = 0
+    for allocation_function in allocation_functions_list:
+        if allocation_function in statement:
+            count_functions += 1
+            print(statement)
+    return count_functions
+
+
+def check_deallocation_functions(statement):
+    deallocation_functions_list = ["free", "delete"]
+    count_functions = 0
+    for deallocation_function in deallocation_functions_list:
+        if deallocation_function in statement:
+            count_functions += 1
+            print(statement)
+    return count_functions
+
+
+def obtain_feature_mm_count(statement):
+    # TODO parses the statement and check all the types
+    list_features = {}
+    allocation_functions = count_allocation_functions(statement)
+    if allocation_functions:
+        list_features[ALLOCATION_FUNCTIONS] = allocation_functions
+    if check_deallocation_functions(statement):
+        list_features.append(DEALLOCATION_FUNCTIONS)
+    return list_features
+
+
+def obtain_mm_features(number_features_memory_management, statements):
+    # Method to calculate the features related to lack of memory management
+    X_memory_management = np.zeros(number_features_memory_management)
+    for statement in statements:
+        print(statement)
+        mm_features = obtain_feature_mm_count(statement)
+        for mm_feature in mm_features:
+            X_memory_management[mm_feature] += 1
+    return X_memory_management
+
+
 def obtain_attribute_matrix(cfg_nx, node_order, statements_filepath):
     # This is a matrix with node degrees. Other attributes can be used
     # TODO Normalize this matrix
 
     number_features_code_sequence = 8
     number_features_vertex_structure = 3
+    number_features_memory_management = 2
+    total_features = number_features_vertex_structure + \
+                     number_features_code_sequence + \
+                     number_features_memory_management
 
     cfg_order = len(node_order)  # number of nodes in the CFG
     if statements_filepath is None:
@@ -147,13 +193,15 @@ def obtain_attribute_matrix(cfg_nx, node_order, statements_filepath):
     else:
         statements_count, statements_node = obtain_statements(statements_filepath)
 
-    X = np.zeros((cfg_order, number_features_vertex_structure + number_features_code_sequence))
+    X = np.zeros((cfg_order, total_features))
     for i in range(X.shape[0]):
         X[i][0] = cfg_nx.out_degree(node_order[i])  # outdegree
         X[i][1] = cfg_nx.in_degree(node_order[i])  # indegree
         X[i][2] = statements_count[node_order[i]]  # number of statements
         X[i][number_features_vertex_structure:number_features_vertex_structure+number_features_code_sequence] = \
             obtain_code_sequence_features(number_features_code_sequence, statements_node[node_order[i]])
+        X[i][number_features_vertex_structure + number_features_code_sequence:total_features] = \
+            obtain_mm_features(number_features_memory_management, statements_node[node_order[i]])
 
     if statements_filepath is None:
         # removes the column with the number of statements per node
