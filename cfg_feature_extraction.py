@@ -144,7 +144,7 @@ def count_allocation_functions(statement):
     return count_functions
 
 
-def check_deallocation_functions(statement):
+def count_allocation_functions(statement):
     deallocation_functions_list = ["free", "delete"]
     count_functions = 0
     for deallocation_function in deallocation_functions_list:
@@ -160,8 +160,9 @@ def obtain_feature_mm_count(statement):
     allocation_functions = count_allocation_functions(statement)
     if allocation_functions:
         list_features[ALLOCATION_FUNCTIONS] = allocation_functions
-    if check_deallocation_functions(statement):
-        list_features.append(DEALLOCATION_FUNCTIONS)
+    deallocation_functions = count_allocation_functions(statement)
+    if deallocation_functions:
+        list_features[DEALLOCATION_FUNCTIONS] = deallocation_functions
     return list_features
 
 
