@@ -51,7 +51,7 @@ statement_types = []
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
     A, X, cfg_nx = None, None, None
     if os.path.exists(cfg_filepath):
-        graphs = read_graph(cfg_filepath)
+        graphs = read_graph(cfg_filepath, print_filepath=False)
 
         if graphs is not None:
             cfg_dot = graphs[0]
@@ -130,12 +130,13 @@ def obtain_code_sequence_features(number_features_code_sequence, statements):
         node_type_id = get_node_type_id(statement_type)
         if node_type_id != -1:
             X_code_sequence[node_type_id] += 1
-    print(types)
+    #print(types)
     return X_code_sequence
 
 
 def count_allocation_functions(statement):
-    allocation_functions_list = ["malloc", "calloc", "realloc", "new"]
+    allocation_functions_list = [" malloc", " calloc", " realloc", " new",
+                                 " kmalloc", " vmalloc", " kvmalloc", " vzalloc"]
     count_functions = 0
     for allocation_function in allocation_functions_list:
         if allocation_function in statement:
@@ -145,7 +146,7 @@ def count_allocation_functions(statement):
 
 
 def count_allocation_functions(statement):
-    deallocation_functions_list = ["free", "delete"]
+    deallocation_functions_list = [" free", " delete", " vfree", " kfree", " kvfree"]
     count_functions = 0
     for deallocation_function in deallocation_functions_list:
         if deallocation_function in statement:
@@ -170,7 +171,7 @@ def obtain_mm_features(number_features_memory_management, statements):
     # Method to calculate the features related to lack of memory management
     X_memory_management = np.zeros(number_features_memory_management)
     for statement in statements:
-        print(statement)
+        #print(statement)
         mm_features = obtain_feature_mm_count(statement)
         for mm_feature in mm_features:
             X_memory_management[mm_feature] += 1
@@ -207,7 +208,7 @@ def obtain_attribute_matrix(cfg_nx, node_order, statements_filepath):
     if statements_filepath is None:
         # removes the column with the number of statements per node
         X = np.delete(X, 2, 1)
-    print(X)
+    #print(X)
     return X
 
 
@@ -222,14 +223,14 @@ def obtain_node_types(cfg_dot):
     node_types = {}
     for node in cfg_dot.get_nodes():
         node_label = node.get_label()
-        print(node.get_name(), node_label)
+        #print(node.get_name(), node_label)
         if node_label is not None:
             node_type = get_node_type(node_label)
             if node_type not in node_types:
                 node_types[node_type] = 1
             else:
                 node_types[node_type] += 1
-    print(node_types)
+    #print(node_types)
     return node_types
 
 
