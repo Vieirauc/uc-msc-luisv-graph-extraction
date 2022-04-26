@@ -134,31 +134,27 @@ def obtain_code_sequence_features(number_features_code_sequence, statements):
     return X_code_sequence
 
 
-def count_allocation_functions(statement):
-    allocation_functions_list = ["malloc", "calloc", "realloc", "new",
-                                 "kmalloc", "vmalloc", "kvmalloc", "vzalloc"]
+def count_functions_statement(statement, functions):
     count_functions = 0
-    for allocation_function in allocation_functions_list:
-        if allocation_function in statement:
-            if statement.startwith(allocation_function) and statement.contains("("):
+    for function_name in functions:
+        if function_name in statement:
+            if statement.startswith(function_name) and statement.contains("("):
                 count_functions += 1
                 print(statement)
             else:
-                print("DIFFERENT CASE (allocation):", statement)
+                print("DIFFERENT CASE:", statement)
     return count_functions
+
+
+def count_allocation_functions(statement):
+    allocation_functions_list = ["malloc", "calloc", "realloc", "new",
+                                 "kmalloc", "vmalloc", "kvmalloc", "vzalloc"]
+    return count_functions_statement(statement, allocation_functions_list)
 
 
 def count_deallocation_functions(statement):
     deallocation_functions_list = ["free", "delete", "vfree", "kfree", "kvfree"]
-    count_functions = 0
-    for deallocation_function in deallocation_functions_list:
-        if deallocation_function in statement:
-            if statement.startwith(deallocation_function) and statement.contains("("):
-                count_functions += 1
-                print(statement)
-            else:
-                print("DIFFERENT CASE (deallocation):", statement)
-    return count_functions
+    return count_functions_statement(statement, deallocation_functions_list)
 
 
 def obtain_feature_mm_count(cfg_statement):
