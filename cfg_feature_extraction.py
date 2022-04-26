@@ -138,7 +138,7 @@ def count_functions_statement(statement, functions):
     count_functions = 0
     for function_name in functions:
         if function_name in statement:
-            if statement.startswith(function_name) and statement.contains("("):
+            if statement.startswith(function_name) and "(" in statement:
                 count_functions += 1
                 print(statement)
             else:
