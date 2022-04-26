@@ -135,8 +135,8 @@ def obtain_code_sequence_features(number_features_code_sequence, statements):
 
 
 def count_allocation_functions(statement):
-    allocation_functions_list = [" malloc", " calloc", " realloc", " new",
-                                 " kmalloc", " vmalloc", " kvmalloc", " vzalloc"]
+    allocation_functions_list = ["malloc", "calloc", "realloc", "new",
+                                 "kmalloc", "vmalloc", "kvmalloc", "vzalloc"]
     count_functions = 0
     for allocation_function in allocation_functions_list:
         if allocation_function in statement:
@@ -146,7 +146,7 @@ def count_allocation_functions(statement):
 
 
 def count_allocation_functions(statement):
-    deallocation_functions_list = [" free", " delete", " vfree", " kfree", " kvfree"]
+    deallocation_functions_list = ["free", "delete", "vfree", "kfree", "kvfree"]
     count_functions = 0
     for deallocation_function in deallocation_functions_list:
         if deallocation_function in statement:
@@ -155,9 +155,11 @@ def count_allocation_functions(statement):
     return count_functions
 
 
-def obtain_feature_mm_count(statement):
+def obtain_feature_mm_count(cfg_statement):
     # TODO parses the statement and check all the types
     list_features = {}
+    statement_type = cfg_statement[1:cfg_statement.index(",")]
+    statement = cfg_statement[cfg_statement.index(",")+1:-1]
     allocation_functions = count_allocation_functions(statement)
     if allocation_functions:
         list_features[ALLOCATION_FUNCTIONS] = allocation_functions
