@@ -47,6 +47,8 @@ projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 
 statement_types = []
 
+other_cases = []
+
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
     A, X, cfg_nx = None, None, None
@@ -142,7 +144,8 @@ def count_functions_statement(statement, functions):
                 count_functions += 1
                 print(statement)
             else:
-                print("DIFFERENT CASE:", statement)
+                print("DIFFERENT CASE (function_name, statement): ({}, {})".format(function_name, statement))
+                other_cases.append((function_name, statement))
     return count_functions
 
 
@@ -286,6 +289,14 @@ def read_cfg_file(project):
             write_cfgs_to_file(project, dataset_samples)
 
     write_cfgs_to_file(project, dataset_samples)
+
+
+def write_other_cases():
+    other_cases_filepath = "output/other-cases.csv"
+    list_other_cases = list(set(other_cases))
+    with open(other_cases_filepath, 'a') as output_file:
+        for item in list_other_cases:
+            output_file.write("{},{}\n".format(item[0], item[1]))
 
 
 def main():
