@@ -140,18 +140,24 @@ def count_allocation_functions(statement):
     count_functions = 0
     for allocation_function in allocation_functions_list:
         if allocation_function in statement:
-            count_functions += 1
-            print(statement)
+            if statement.startwith(allocation_function) and statement.contains("("):
+                count_functions += 1
+                print(statement)
+            else:
+                print("DIFFERENT CASE (allocation):", statement)
     return count_functions
 
 
-def count_allocation_functions(statement):
+def count_deallocation_functions(statement):
     deallocation_functions_list = ["free", "delete", "vfree", "kfree", "kvfree"]
     count_functions = 0
     for deallocation_function in deallocation_functions_list:
         if deallocation_function in statement:
-            count_functions += 1
-            print(statement)
+            if statement.startwith(deallocation_function) and statement.contains("("):
+                count_functions += 1
+                print(statement)
+            else:
+                print("DIFFERENT CASE (deallocation):", statement)
     return count_functions
 
 
@@ -163,7 +169,7 @@ def obtain_feature_mm_count(cfg_statement):
     allocation_functions = count_allocation_functions(statement)
     if allocation_functions:
         list_features[ALLOCATION_FUNCTIONS] = allocation_functions
-    deallocation_functions = count_allocation_functions(statement)
+    deallocation_functions = count_deallocation_functions(statement)
     if deallocation_functions:
         list_features[DEALLOCATION_FUNCTIONS] = deallocation_functions
     return list_features
