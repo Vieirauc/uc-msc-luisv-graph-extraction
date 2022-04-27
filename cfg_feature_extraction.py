@@ -142,7 +142,7 @@ def count_functions_statement(statement, functions, features_identified):
     count_functions = 0
     for function_name in functions:
         if function_name in statement:
-            if statement.startswith(function_name) and "(" in statement:
+            if statement.startswith("{}(".format(function_name)):
                 count_functions += 1
                 print(statement)
                 features_identified.append((function_name, statement))
