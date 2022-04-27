@@ -292,7 +292,7 @@ def read_cfg_file(project):
 
 
 def write_other_cases():
-    other_cases_filepath = "output/other-cases.csv"
+    other_cases_filepath = "other-cases.csv"
     list_other_cases = list(set(other_cases))
     with open(other_cases_filepath, 'a') as output_file:
         for item in list_other_cases:
@@ -309,12 +309,13 @@ def main():
     #print(A)
     #print(X)
 
-    for project in projects[2:3]:
+    for project in projects[3:4]:
         read_cfg_file(project)
+        write_other_cases()
 
-        statement_type_count = Counter(statement_types)
-        for item in statement_type_count.most_common():
-            print(item)
+        #statement_type_count = Counter(statement_types)
+        #for item in statement_type_count.most_common():
+        #    print(item)
 
 
 if __name__ == "__main__":
