@@ -48,6 +48,8 @@ projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 statement_types = []
 
 other_cases = []
+allocation_features = []
+deallocation_features = []
 
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
@@ -136,13 +138,14 @@ def obtain_code_sequence_features(number_features_code_sequence, statements):
     return X_code_sequence
 
 
-def count_functions_statement(statement, functions):
+def count_functions_statement(statement, functions, features_identified):
     count_functions = 0
     for function_name in functions:
         if function_name in statement:
             if statement.startswith(function_name) and "(" in statement:
                 count_functions += 1
                 print(statement)
+                features_identified.append((function_name, statement))
             else:
                 print("DIFFERENT CASE (function_name, statement): ({}, {})".format(function_name, statement))
                 other_cases.append((function_name, statement))
@@ -152,12 +155,12 @@ def count_functions_statement(statement, functions):
 def count_allocation_functions(statement):
     allocation_functions_list = ["malloc", "calloc", "realloc", "new",
                                  "kmalloc", "vmalloc", "kvmalloc", "vzalloc"]
-    return count_functions_statement(statement, allocation_functions_list)
+    return count_functions_statement(statement, allocation_functions_list, allocation_features)
 
 
 def count_deallocation_functions(statement):
     deallocation_functions_list = ["free", "delete", "vfree", "kfree", "kvfree"]
-    return count_functions_statement(statement, deallocation_functions_list)
+    return count_functions_statement(statement, deallocation_functions_list, deallocation_features)
 
 
 def obtain_feature_mm_count(cfg_statement):
@@ -171,6 +174,7 @@ def obtain_feature_mm_count(cfg_statement):
     deallocation_functions = count_deallocation_functions(statement)
     if deallocation_functions:
         list_features[DEALLOCATION_FUNCTIONS] = deallocation_functions
+    list_features[MEMORY_ADDRESS_OF] = 0  #TODO to be implemented
     return list_features
 
 
@@ -191,7 +195,7 @@ def obtain_attribute_matrix(cfg_nx, node_order, statements_filepath):
 
     number_features_code_sequence = 8
     number_features_vertex_structure = 3
-    number_features_memory_management = 2
+    number_features_memory_management = 3
     total_features = number_features_vertex_structure + \
                      number_features_code_sequence + \
                      number_features_memory_management
@@ -291,11 +295,10 @@ def read_cfg_file(project):
     write_cfgs_to_file(project, dataset_samples)
 
 
-def write_other_cases():
-    other_cases_filepath = "other-cases.csv"
-    list_other_cases = list(set(other_cases))
-    with open(other_cases_filepath, 'a') as output_file:
-        for item in list_other_cases:
+def write_output_file(rows, output_filepath):
+    rows_list = list(set(rows))
+    with open(output_filepath, 'w') as output_file:
+        for item in rows_list:
             output_file.write("{},{}\n".format(item[0], item[1]))
 
 
@@ -311,7 +314,9 @@ def main():
 
     for project in projects[3:4]:
         read_cfg_file(project)
-        write_other_cases()
+        write_output_file(other_cases, "other-cases.csv")
+        write_output_file(allocation_features, "allocation.csv")
+        write_output_file(deallocation_features, "deallocation.csv")
 
         #statement_type_count = Counter(statement_types)
         #for item in statement_type_count.most_common():

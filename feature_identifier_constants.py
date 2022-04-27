@@ -11,6 +11,7 @@ DATA_DECLARATION_INSTRUCTION = 7
 # memory management functions
 ALLOCATION_FUNCTIONS = 0
 DEALLOCATION_FUNCTIONS = 1
+MEMORY_ADDRESS_OF = 2
 
 statement_type_map = {
     "<operator>.addition": ARITHMETIC_INSTRUCTION,
