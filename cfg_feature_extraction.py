@@ -50,6 +50,7 @@ statement_types = []
 other_cases = []
 allocation_features = []
 deallocation_features = []
+unsafe_features = []
 
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
@@ -142,7 +143,6 @@ def count_functions_statement(statement, functions, features_identified):
     count_functions = 0
     for function_name in functions:
         if function_name in statement:
-            # TODO não pode ser o startswith
             if statement.startswith("{}(".format(function_name)) or " {}(".format(function_name) in statement:
                 count_functions += 1
                 print(statement)
@@ -165,18 +165,38 @@ def count_deallocation_functions(statement):
     return count_functions_statement(statement, deallocation_functions_list, deallocation_features)
 
 
+def count_convert_unsafe_functions(statement):
+    convert_unsafe_functions_list = ["atoi", "atol", "atoll", "atof"]
+    return count_functions_statement(statement, convert_unsafe_functions_list, unsafe_features)
+
+
+def count_string_unsafe_functions(statement):
+    string_unsafe_functions_list = ["gets", "getpw", "strcat", "strcpy", "sprintf", "vsprintf", "puts", "read_chunk"]
+    return count_functions_statement(statement, string_unsafe_functions_list, unsafe_features)
+
+
+def count_scanf_unsafe_functions(statement):
+    scanf_unsafe_functions_list = ["scanf", "fscanf", "sscanf", "vscanf", "vsscanf", "vfscanf"]
+    return count_functions_statement(statement, scanf_unsafe_functions_list, unsafe_features)
+
+
+def count_other_unsafe_functions(statement):
+    scanf_other_functions_list = ["realpath", "getopt", "getpass", "streadd", "strecpy", "strtrns"]
+    return count_functions_statement(statement, scanf_other_functions_list, unsafe_features)
+
+
 def obtain_feature_mm_count(cfg_statement):
     # TODO parses the statement and check all the types
     list_features = {}
     statement_type = cfg_statement[1:cfg_statement.index(",")]
     statement = cfg_statement[cfg_statement.index(",")+1:-1]
-    allocation_functions = count_allocation_functions(statement)
-    if allocation_functions:
-        list_features[ALLOCATION_FUNCTIONS] = allocation_functions
-    deallocation_functions = count_deallocation_functions(statement)
-    if deallocation_functions:
-        list_features[DEALLOCATION_FUNCTIONS] = deallocation_functions
+    list_features[ALLOCATION_FUNCTIONS] = count_allocation_functions(statement)
+    list_features[DEALLOCATION_FUNCTIONS] = count_deallocation_functions(statement)
     list_features[MEMORY_ADDRESS_OF] = 0  #TODO to be implemented
+    list_features[CONVERT_UNSAFE] = count_convert_unsafe_functions(statement)
+    list_features[STRING_UNSAFE] = count_string_unsafe_functions(statement)
+    list_features[SCANF_UNSAFE] = count_scanf_unsafe_functions(statement)
+    list_features[OTHER_UNSAFE] = count_other_unsafe_functions(statement)
     return list_features
 
 
@@ -197,7 +217,7 @@ def obtain_attribute_matrix(cfg_nx, node_order, statements_filepath):
 
     number_features_code_sequence = 8
     number_features_vertex_structure = 3
-    number_features_memory_management = 3
+    number_features_memory_management = 7
     total_features = number_features_vertex_structure + \
                      number_features_code_sequence + \
                      number_features_memory_management
