@@ -142,7 +142,8 @@ def count_functions_statement(statement, functions, features_identified):
     count_functions = 0
     for function_name in functions:
         if function_name in statement:
-            if statement.startswith("{}(".format(function_name)):
+            # TODO não pode ser o startswith
+            if statement.startswith("{}(".format(function_name)) or " {}(".format(function_name) in statement:
                 count_functions += 1
                 print(statement)
                 features_identified.append((function_name, statement))
@@ -154,7 +155,8 @@ def count_functions_statement(statement, functions, features_identified):
 
 def count_allocation_functions(statement):
     allocation_functions_list = ["malloc", "calloc", "realloc", "new",
-                                 "kmalloc", "vmalloc", "kvmalloc", "vzalloc"]
+                                 "kmalloc", "vmalloc", "kvmalloc", "vzalloc",
+                                 "kcalloc"]
     return count_functions_statement(statement, allocation_functions_list, allocation_features)
 
 
