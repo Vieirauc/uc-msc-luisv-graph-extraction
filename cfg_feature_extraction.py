@@ -339,6 +339,7 @@ def main():
         write_output_file(other_cases, "other-cases.csv")
         write_output_file(allocation_features, "allocation.csv")
         write_output_file(deallocation_features, "deallocation.csv")
+        write_output_file(unsafe_features, "unsafe.csv")
 
         #statement_type_count = Counter(statement_types)
         #for item in statement_type_count.most_common():
