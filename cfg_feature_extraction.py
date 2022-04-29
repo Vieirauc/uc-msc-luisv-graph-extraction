@@ -186,7 +186,7 @@ def count_other_unsafe_functions(statement):
 
 
 def count_address_of(statement_type):
-    return 1 if statement_type == "addressOf" else 0
+    return 1 if statement_type == "<operator>.addressOf" else 0
 
 
 def obtain_feature_mm_count(cfg_statement):
