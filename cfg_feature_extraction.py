@@ -187,6 +187,16 @@ def count_other_unsafe_functions(statement):
 
 def count_address_of(statement_type):
     return 1 if statement_type == "<operator>.addressOf" else 0
+    # Verificar este caso
+    # ---> Nem todos são deste tipo.
+    # Ver este caso: /hdd/josep/linux/output-cfg-aa77d26961fa4ecb11fe4209578dcd62ad15819d/security---selinux---hooks.c/233-cfg.dot
+
+
+def count_pointer_assignment(statement_type, statement):
+    if statement_type == "<operator>.assignment" and statement.startswith("*") and statement.contains("="):
+        print(statement_type, statement)
+        return 1
+    return 0
 
 
 def obtain_feature_mm_count(cfg_statement):
@@ -196,6 +206,7 @@ def obtain_feature_mm_count(cfg_statement):
     statement = cfg_statement[cfg_statement.index(",")+1:-1]
     list_features[ALLOCATION_FUNCTIONS] = count_allocation_functions(statement)
     list_features[DEALLOCATION_FUNCTIONS] = count_deallocation_functions(statement)
+    list_features[POINTER_ASSIGNMENT] = count_pointer_assignment(statement_type, statement)
     list_features[MEMORY_ADDRESS_OF] = count_address_of(statement_type)
     list_features[CONVERT_UNSAFE] = count_convert_unsafe_functions(statement)
     list_features[STRING_UNSAFE] = count_string_unsafe_functions(statement)
@@ -221,7 +232,7 @@ def obtain_attribute_matrix(cfg_nx, node_order, statements_filepath):
 
     number_features_code_sequence = 8
     number_features_vertex_structure = 3
-    number_features_memory_management = 7
+    number_features_memory_management = 8
     total_features = number_features_vertex_structure + \
                      number_features_code_sequence + \
                      number_features_memory_management
