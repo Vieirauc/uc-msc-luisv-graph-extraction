@@ -193,7 +193,7 @@ def count_address_of(statement_type):
 
 
 def count_pointer_assignment(statement_type, statement):
-    if statement_type == "<operator>.assignment" and statement.startswith("*") and statement.contains("="):
+    if statement_type == "<operator>.assignment" and statement.startswith("*") and ("=" in statement):
         print(statement_type, statement)
         return 1
     return 0
