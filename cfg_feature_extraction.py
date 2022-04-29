@@ -185,6 +185,10 @@ def count_other_unsafe_functions(statement):
     return count_functions_statement(statement, scanf_other_functions_list, unsafe_features)
 
 
+def count_address_of(statement_type):
+    return 1 if statement_type == "addressOf" else 0
+
+
 def obtain_feature_mm_count(cfg_statement):
     # TODO parses the statement and check all the types
     list_features = {}
@@ -192,7 +196,7 @@ def obtain_feature_mm_count(cfg_statement):
     statement = cfg_statement[cfg_statement.index(",")+1:-1]
     list_features[ALLOCATION_FUNCTIONS] = count_allocation_functions(statement)
     list_features[DEALLOCATION_FUNCTIONS] = count_deallocation_functions(statement)
-    list_features[MEMORY_ADDRESS_OF] = 0  #TODO to be implemented
+    list_features[MEMORY_ADDRESS_OF] = count_address_of(statement_type)
     list_features[CONVERT_UNSAFE] = count_convert_unsafe_functions(statement)
     list_features[STRING_UNSAFE] = count_string_unsafe_functions(statement)
     list_features[SCANF_UNSAFE] = count_scanf_unsafe_functions(statement)
@@ -207,7 +211,7 @@ def obtain_mm_features(number_features_memory_management, statements):
         #print(statement)
         mm_features = obtain_feature_mm_count(statement)
         for mm_feature in mm_features:
-            X_memory_management[mm_feature] += 1
+            X_memory_management[mm_feature] += mm_features[mm_feature]
     return X_memory_management
 
 
