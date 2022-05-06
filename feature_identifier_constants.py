@@ -20,7 +20,7 @@ OTHER_UNSAFE = 7
 
 statement_type_map = {
     "<operator>.addition": ARITHMETIC_INSTRUCTION,
-    "<operator>.addressOf": TRANSFER_INSTRUCTION,
+    #"<operator>.addressOf": TRANSFER_INSTRUCTION,
     "<operator>.and": ARITHMETIC_INSTRUCTION,
     "<operator>.arithmeticShiftRight": ARITHMETIC_INSTRUCTION,
     "<operator>.assignment": MOV_INSTRUCTION,
@@ -66,7 +66,7 @@ statement_type_map = {
     #"bool": DATA_DECLARATION_INSTRUCTION,
     "CASE": COMPARE_INSTRUCTION,
     "FIELD_IDENTIFIER": DATA_DECLARATION_INSTRUCTION,
-    "free": MOV_INSTRUCTION,
+    #"free": MOV_INSTRUCTION,
     "length": ARITHMETIC_INSTRUCTION,
     "memcmp": COMPARE_INSTRUCTION,
     "memcpy": TRANSFER_INSTRUCTION,
@@ -77,7 +77,7 @@ statement_type_map = {
     "RETURN": TERMINATION_INSTRUCTION,
     "strcasecmp": COMPARE_INSTRUCTION,
     "strcmp": COMPARE_INSTRUCTION,
-    "strcpy": TRANSFER_INSTRUCTION,
+    #"strcpy": TRANSFER_INSTRUCTION,
     "strlcpy": TRANSFER_INSTRUCTION,
     "strlen": ARITHMETIC_INSTRUCTION,
     "strncmp": COMPARE_INSTRUCTION,
