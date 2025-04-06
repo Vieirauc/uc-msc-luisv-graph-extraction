@@ -7,13 +7,15 @@ from version_management import load_commit
 
 target_commit = "3b365793c19aff95d1cf9bbea19f138752264d12"
 
-base_project_directory = "/home/zema-21/Projects/"
+base_project_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/projects"
 commit_data_directory = "function-data"
 commit_data_mask = "{}-functions.csv"
+commit_data = "selected_code_units.csv"
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 FILE_PATH = "File Path"
+SUBSET = True
 
-base_output_directory = "/opt/josep"
+base_output_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/cfg-extractor/output"
 
 
 def obtain_commits(project):
@@ -31,7 +33,8 @@ def obtain_commits_files(project):
     # each file of "commit_data_directory" (function-data) is in the GitHub from João Henggeler
     # scripts/output/final/[PROJECT_NAME]/affected-files-[PROJECT_ID]-[PROJECT]-master-branch-[date].csv
     # e.g., "scripts/output/final/mozilla/affected-files-1-mozilla-master-branch-20210401212440.csv"
-    filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
+    #filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
+    filepath = os.path.join(commit_data_directory, commit_data)
     df = pd.read_csv(filepath)
     commits = df[VULNERABLE_COMMIT_HASH].tolist()
     commits = list(set(commits))
@@ -68,14 +71,14 @@ def extract_cfg_per_commit_file(project, commits_files):
     for commit in commits_files:
         load_commit(repository_path, commit)
         cfg_directory = extract_cfg_per_file(base_output_directory, project,
-                                             repository_path, commit, commits_files[commit])
-        #map_cfg_per_function(cfg_directory)
-        #save_cfg()
+                                             repository_path, commit, commits_files[commit], "ddg")
+        map_cfg_per_function(cfg_directory)
+        save_cfg()
 
 
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
-    for project in projects[1:2]:
+    for project in projects[3:4]:
         if should_run_per_directory(project):
             # Extract the CFG for the listed files only
             commits_files = obtain_commits_files(project)

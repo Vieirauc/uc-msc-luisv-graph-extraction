@@ -14,16 +14,17 @@ import json
 import os
 import pandas as pd
 
-base_dot_directory = "/opt/josep"
+base_dot_directory = "output"
 commit_data_directory = "function-data"
 output_directory = "output-data"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 commit_data_mask = "{}-functions.csv"
+commit_data="selected_code_units.csv"
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 FILE_PATH = "File Path"
 VULNERABLE_FUNCTIONS = "Vulnerable File Functions"
 
-graph_type = "cfg"
+graph_type = "ddg"
 
 
 def convert_dot_to_json(project):
@@ -67,7 +68,8 @@ def map_functions_to_cfg(project):
     #  3) finds the corresponding CFG file (.dot) of the function
     #  4) creates a CSV file with the output, with the following fields
     #     commit, filepath, function_name, CFG_filepath, vulnerable_label
-    filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
+    #filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
+    filepath = os.path.join(commit_data_directory, commit_data)
     df = pd.read_csv(filepath)
 
     # Filter the samples without vulnerable functions
@@ -114,11 +116,11 @@ def map_functions_to_cfg(project):
             print(csv_row)
             csv_rows.append(csv_row)
 
-    write_output_file("functions-cfg-{}.csv".format(project), csv_rows)
+    write_output_file("functions-{}-{}.csv".format(graph_type,project), csv_rows)
 
 
 def main():
-    for project in projects[0:1]:
+    for project in projects[3:4]:
         #if directory_per_file(project):
         #    map_functions_to_cfg(project)
         #else:

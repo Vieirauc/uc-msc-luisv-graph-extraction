@@ -12,6 +12,7 @@ def obtain_directories(repository_path, run_per_directory):
 
 
 def extract_cfg(base_output_directory, project, repository_path, commit, run_per_directory=False):
+    os.environ["PATH"] += os.pathsep + r"C:\Users\luka3\Desktop\UC\MSI\Tese\code\cfg-extractor\cfg_env\joern\joern\joern-cli"
     # joern-parse  --language c [repository_path]
     # joern-export --repr cfg --out [output_directory]
 
@@ -35,11 +36,12 @@ def extract_cfg(base_output_directory, project, repository_path, commit, run_per
     return output_directory
 
 
-def extract_cfg_per_file(base_output_directory, project, repository_path, commit, files):
+def extract_cfg_per_file(base_output_directory, project, repository_path, commit, files, graph_type):
+    os.environ["PATH"] += os.pathsep + r"C:\Users\luka3\Desktop\UC\MSI\Tese\code\cfg-extractor\cfg_env\joern\joern\joern-cli"
     # joern-parse [repository_path]
     # joern-export --repr cfg --out [output_directory]
 
-    graph_type = "cfg"
+    
     output_directory = os.path.join(base_output_directory, project,
                                     "output-{}-{}".format(graph_type, commit))
 

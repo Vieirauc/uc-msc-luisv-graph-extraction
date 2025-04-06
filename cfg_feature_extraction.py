@@ -52,6 +52,8 @@ allocation_features = []
 deallocation_features = []
 unsafe_features = []
 
+graph_type = "ddg"
+
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
     A, X, cfg_nx = None, None, None
