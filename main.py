@@ -15,7 +15,7 @@ VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 FILE_PATH = "File Path"
 SUBSET = True
 
-base_output_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/cfg-extractor/output"
+base_output_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/uc-msc-luisv-graph_extractor/output"
 
 
 def obtain_commits(project):
