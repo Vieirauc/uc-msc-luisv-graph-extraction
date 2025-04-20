@@ -71,7 +71,7 @@ def extract_cfg_per_commit_file(project, commits_files):
     for commit in commits_files:
         load_commit(repository_path, commit)
         cfg_directory = extract_cfg_per_file(base_output_directory, project,
-                                             repository_path, commit, commits_files[commit], "ddg")
+                                             repository_path, commit, commits_files[commit], "cpg")
         map_cfg_per_function(cfg_directory)
         save_cfg()
 

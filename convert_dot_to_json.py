@@ -24,7 +24,7 @@ VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 FILE_PATH = "File Path"
 VULNERABLE_FUNCTIONS = "Vulnerable File Functions"
 
-graph_type = "ddg"
+graph_type = "cfg"
 
 
 def convert_dot_to_json(project):

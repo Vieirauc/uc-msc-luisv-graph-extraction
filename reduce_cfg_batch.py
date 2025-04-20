@@ -7,18 +7,18 @@ from reduce_graph import reduce_graph, write_dot_file, write_statement_file
 
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 data_directory = "output-data"
-file_cfg_data_mask = "functions-cfg-{}.csv"
-
+file_cfg_data_mask = "functions-{}-{}.csv"
+graph = "cfg"
 
 def read_cfg_file(project):
-    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(graph,project))
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
     for index, row in df.iterrows():
         cfg_filepath = row[CFG_FILE]
 
-        cfg_filepath_parts = cfg_filepath.split("/")
+        cfg_filepath_parts = cfg_filepath.split("\\")
         cfg_filename = cfg_filepath_parts[-1]
         cfg_name = cfg_filename[:cfg_filename.index(".dot")]
 
@@ -56,7 +56,7 @@ def check_created_directory(base_directory, type_directory, output_commit, repos
 
 
 def main():
-    for project in projects[0:1]:
+    for project in projects[3:4]:
         read_cfg_file(project)
 
 

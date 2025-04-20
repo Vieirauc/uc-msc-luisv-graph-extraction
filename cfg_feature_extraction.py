@@ -42,7 +42,7 @@ statements_cfg_folder = "statements-cfg-output"
 reduced_cfg_folder = "reduced-cfg-output"
 
 data_directory = "output-data"
-file_cfg_data_mask = "functions-cfg-{}.csv"
+file_cfg_data_mask = "functions-{}-{}.csv"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 
 statement_types = []
@@ -52,7 +52,7 @@ allocation_features = []
 deallocation_features = []
 unsafe_features = []
 
-graph_type = "ddg"
+graph_type = "cfg"
 
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
@@ -92,7 +92,7 @@ def convert_graph_to_adjacency_matrix(cfg_dot):
         head = different_order_nodes.pop(-2)
         different_order_nodes.insert(0, head)
     #print(different_order_nodes)
-    np_matrix = nx.to_numpy_matrix(cfg, nodelist=different_order_nodes)
+    np_matrix = nx.to_numpy_array(cfg, nodelist=different_order_nodes)
     #print(np_matrix)
     return np_matrix, different_order_nodes
 
@@ -285,7 +285,7 @@ def obtain_node_types(cfg_dot):
 
 
 def obtain_reduced_statement_filepath(project, cfg_filepath):
-    cfg_filepath_parts = cfg_filepath.split("/")
+    cfg_filepath_parts = cfg_filepath.split("\\")
 
     cfg_filename = cfg_filepath_parts[-1]
     cfg_name = cfg_filename[:cfg_filename.index(".dot")]
@@ -309,7 +309,7 @@ def obtain_reduced_statement_filepath(project, cfg_filepath):
 
 
 def read_cfg_file(project):
-    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project))
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(graph_type,project))
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
@@ -321,7 +321,7 @@ def read_cfg_file(project):
         A, X, cfg_nx = obtain_cfg_data_structures(cfg_reduced_filepath, statements_filepath)
 
         if A is not None:
-            adjacency_matrix = list(A.getA1().flatten())
+            adjacency_matrix = list(A.ravel())
             adjacency_matrix = [int(a) for a in adjacency_matrix]
             features = list(X.flatten())
             features = [int(f) for f in features]

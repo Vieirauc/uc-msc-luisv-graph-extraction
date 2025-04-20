@@ -1,6 +1,10 @@
 import os
 import subprocess
 
+JOERN_CLI_DIR = r"C:\Users\luka3\Desktop\UC\MSI\Tese\code\uc-msc-luisv-graph_extractor\tools\joern\joern\joern-cli"
+JOERN_PARSE = os.path.join(JOERN_CLI_DIR, "joern-parse.bat")  # or joern-parse if .bat not needed
+JOERN_EXPORT = os.path.join(JOERN_CLI_DIR, "joern-export.bat")
+
 
 def obtain_directories(repository_path, run_per_directory):
     if run_per_directory:
@@ -50,13 +54,16 @@ def extract_cfg_per_file(base_output_directory, project, repository_path, commit
         os.mkdir(output_directory)
         for filename in files:
             filepath = os.path.join(repository_path, filename)
-            parse_command = "joern-parse {}".format(filepath)
-            print(subprocess.Popen(parse_command, shell=True, stdout=subprocess.PIPE).stdout.read())
+
+            parse_result = subprocess.run([JOERN_PARSE, filepath], capture_output=True, text=True)
+            print(parse_result.stdout)
 
             # Command to export the cfg
             filepath_directory = filename.replace("/", "---")
             cfg_output_directory = os.path.join(output_directory, filepath_directory)
-            parse_command = "joern-export --repr {} --out {}".format(graph_type, cfg_output_directory)
-            print(subprocess.Popen(parse_command, shell=True, stdout=subprocess.PIPE).stdout.read())
+            
+            export_result = subprocess.run([JOERN_EXPORT, "--repr", graph_type, "--out", cfg_output_directory],
+                                   capture_output=True, text=True)
+            print(export_result.stdout)
 
     return output_directory
