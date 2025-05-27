@@ -308,7 +308,7 @@ def obtain_reduced_statement_filepath(project, cfg_filepath):
     return cfg_reduced_filepath, statements_filepath
 
 
-def read_cfg_file(project):
+def fex_read_cfg_file(project):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(graph_type,project))
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
@@ -352,7 +352,7 @@ def main():
     #print(X)
 
     for project in projects[3:4]:
-        read_cfg_file(project)
+        fex_read_cfg_file(project)
         write_output_file(other_cases, "other-cases.csv")
         write_output_file(allocation_features, "allocation.csv")
         write_output_file(deallocation_features, "deallocation.csv")

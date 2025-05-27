@@ -2,8 +2,8 @@ import pandas as pd
 import re
 
 # File paths
-cfg_dataset_path = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/cfg-extractor/subsets/cfg-dataset-linux-v0.5.csv"
-linux_functions_path = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/cfg-extractor/subsets/linux-functions.csv"
+cfg_dataset_path = "C:\Users\luka3\Desktop\UC\MSI\Tese\code\uc-msc-luisv-cfg-dataset\datasets\cfg-dataset-linux-v0.5.csv"
+linux_functions_path = "C:\Users\luka3\Desktop\UC\MSI\Tese\code\uc-msc-luisv-graph_extractor\function-data\linux-functions.csv"
 
 # Load datasets
 cfg_dataset_df = pd.read_csv(cfg_dataset_path, delimiter=";")

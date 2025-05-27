@@ -4,6 +4,9 @@ from cfg_persistence import save_cfg
 import os
 import pandas as pd
 from version_management import load_commit
+from convert_dot_to_json import map_functions_to_cfg
+from reduce_cfg_batch import reduce_read_cfg_file, generate_raw_cfg_artifacts
+from cfg_feature_extraction import fex_read_cfg_file
 
 target_commit = "3b365793c19aff95d1cf9bbea19f138752264d12"
 
@@ -14,6 +17,7 @@ commit_data = "selected_code_units.csv"
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 FILE_PATH = "File Path"
 SUBSET = True
+GRAPH_TYPE = "cfg"
 
 base_output_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/uc-msc-luisv-graph_extractor/output"
 
@@ -71,7 +75,7 @@ def extract_cfg_per_commit_file(project, commits_files):
     for commit in commits_files:
         load_commit(repository_path, commit)
         cfg_directory = extract_cfg_per_file(base_output_directory, project,
-                                             repository_path, commit, commits_files[commit], "cpg")
+                                             repository_path, commit, commits_files[commit], GRAPH_TYPE)
         map_cfg_per_function(cfg_directory)
         save_cfg()
 
@@ -82,7 +86,13 @@ def main():
         if should_run_per_directory(project):
             # Extract the CFG for the listed files only
             commits_files = obtain_commits_files(project)
-            extract_cfg_per_commit_file(project, commits_files)
+            extract_cfg_per_commit_file(project, commits_files) # calls extract_cfg_per_file from cfg_extraction.py
+            map_functions_to_cfg(project)                       # from convert_dot_to_json.py
+            #reduce_read_cfg_file(project)                              # from reduce_cfg_batch.py
+            generate_raw_cfg_artifacts(project)                     # from reduce_cfg_batch.py (skips the reduction)
+            fex_read_cfg_file(project)                              # from cfg_feature_extraction.py
+            
+
         else:
             # Extract the CFG for all the files of the commit
             commits = obtain_commits(project)
