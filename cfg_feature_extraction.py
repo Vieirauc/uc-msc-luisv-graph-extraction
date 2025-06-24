@@ -4,6 +4,7 @@ import os
 import networkx as nx
 import numpy as np
 import pandas as pd
+import html
 
 from cfg_extraction_constants import CFG_FILE, LABEL
 from cfg_parsing import read_graph
@@ -52,7 +53,7 @@ allocation_features = []
 deallocation_features = []
 unsafe_features = []
 
-graph_type = "cfg"
+#graph_type = "cfg"
 
 
 def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
@@ -71,6 +72,52 @@ def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
                 A, node_order = convert_graph_to_adjacency_matrix(cfg_dot)
                 X = obtain_attribute_matrix(cfg_nx, node_order, statements_filepath)
     return A, X, cfg_nx
+
+def obtain_ast_features(ast_nx, node_order):
+    number_features_vertex_structure = 3
+    # Additional features can be added later.
+    X = np.zeros((len(node_order), number_features_vertex_structure))
+    for i, node in enumerate(node_order):
+        X[i][0] = ast_nx.out_degree(node)
+        X[i][1] = ast_nx.in_degree(node)
+        X[i][2] = 1  # placeholder: each AST node is one statement
+    return X
+
+def obtain_ddg_features(ddg_nx, node_order):
+    number_features_vertex_structure = 3
+    X = np.zeros((len(node_order), number_features_vertex_structure))
+    for i, node in enumerate(node_order):
+        X[i][0] = ddg_nx.out_degree(node)
+        X[i][1] = ddg_nx.in_degree(node)
+        # Whether the node label includes "global" (for global variable usage)
+        label = ddg_nx.nodes[node].get("label", "").lower()
+        X[i][2] = 1 if "global" in label else 0
+    return X
+
+
+def obtain_graph_data_structures(graph_type, filepath, statements_filepath=None):
+    A, X, nx_graph, node_order = None, None, None, []
+    if os.path.exists(filepath):
+        graphs = read_graph(filepath, print_filepath=False)
+
+        if graphs is not None:
+            dot = graphs[0]
+            nx_graph = nx.nx_pydot.from_pydot(dot)
+
+            if len(nx_graph.nodes()) > 0:
+                A, node_order = convert_graph_to_adjacency_matrix(dot)
+
+                if graph_type == "cfg":
+                    X = obtain_attribute_matrix(nx_graph, node_order, statements_filepath)
+                elif graph_type == "ast":
+                    X = obtain_ast_features(nx_graph, node_order)
+                elif graph_type == "ddg":
+                    X = obtain_ddg_features(nx_graph, node_order)
+                
+                return A, X, nx_graph, node_order
+                #print(f"Graph: {filepath} - A.shape: {A.shape if A is not None else None}, X.shape: {X.shape if X is not None else None}")
+    return A, X, nx_graph, node_order
+
 
 
 def convert_graph_to_adjacency_matrix(cfg_dot):
@@ -95,7 +142,6 @@ def convert_graph_to_adjacency_matrix(cfg_dot):
     np_matrix = nx.to_numpy_array(cfg, nodelist=different_order_nodes)
     #print(np_matrix)
     return np_matrix, different_order_nodes
-
 
 def obtain_statements(statements_filepath):
     with open(statements_filepath) as f:
@@ -126,6 +172,23 @@ def get_node_type_id(statement_type):
     else:
         return -1
 
+'''
+def obtain_code_sequence_features(number_features_code_sequence, statements):
+    X_code_sequence = np.zeros(number_features_code_sequence)
+    types = []
+    for statement in statements:
+        # Ensure we handle statements without a comma
+        comma_index = statement.find(",")
+        if comma_index != -1:
+            statement_type = statement[1:comma_index]
+        else:
+            statement_type = statement.strip("()")
+        types.append(statement_type)
+        node_type_id = get_node_type_id(statement_type)
+        if node_type_id != -1:
+            X_code_sequence[node_type_id] += 1
+    return X_code_sequence
+'''
 
 def obtain_code_sequence_features(number_features_code_sequence, statements):
     # creates the features based on the code sequence
@@ -147,10 +210,10 @@ def count_functions_statement(statement, functions, features_identified):
         if function_name in statement:
             if statement.startswith("{}(".format(function_name)) or " {}(".format(function_name) in statement:
                 count_functions += 1
-                print(statement)
+                #print(statement)
                 features_identified.append((function_name, statement))
             else:
-                print("DIFFERENT CASE (function_name, statement): ({}, {})".format(function_name, statement))
+                #print("DIFFERENT CASE (function_name, statement): ({}, {})".format(function_name, statement))
                 other_cases.append((function_name, statement))
     return count_functions
 
@@ -206,6 +269,17 @@ def obtain_feature_mm_count(cfg_statement):
     list_features = {}
     statement_type = cfg_statement[1:cfg_statement.index(",")]
     statement = cfg_statement[cfg_statement.index(",")+1:-1]
+
+    '''
+    comma_index = cfg_statement.find(",")
+    if comma_index != -1:
+        statement_type = cfg_statement[1:comma_index]
+        statement = cfg_statement[comma_index+1:-1]
+    else:
+        statement_type = cfg_statement.strip("()").split(" ")[0]  # ou outro fallback seguro
+        statement = cfg_statement.strip("()")
+    '''
+
     list_features[ALLOCATION_FUNCTIONS] = count_allocation_functions(statement)
     list_features[DEALLOCATION_FUNCTIONS] = count_deallocation_functions(statement)
     list_features[POINTER_ASSIGNMENT] = count_pointer_assignment(statement_type, statement)
@@ -284,7 +358,7 @@ def obtain_node_types(cfg_dot):
     return node_types
 
 
-def obtain_reduced_statement_filepath(project, cfg_filepath):
+def obtain_reduced_statement_filepath(project, cfg_filepath, graph_type="cfg"):
     cfg_filepath_parts = cfg_filepath.split("\\")
 
     cfg_filename = cfg_filepath_parts[-1]
@@ -301,15 +375,15 @@ def obtain_reduced_statement_filepath(project, cfg_filepath):
     output_commit = cfg_filepath_parts[output_commit_index]
     base_directory = "/".join(cfg_filepath_parts[0:base_directory_max_index])
 
-    cfg_reduced_filepath = os.path.join(base_directory, "{}-reduced".format(project),
+    cfg_reduced_filepath = os.path.join(base_directory, "{}-{}-reduced".format(project, graph_type),
                                         output_commit, repository_directory, "{}.dot".format(cfg_name))
-    statements_filepath = os.path.join(base_directory, "{}-statements".format(project),
+    statements_filepath = os.path.join(base_directory, "{}-{}-statements".format(project, graph_type),
                                        output_commit, repository_directory, "{}.txt".format(cfg_name))
     return cfg_reduced_filepath, statements_filepath
 
 
-def fex_read_cfg_file(project):
-    filepath = os.path.join(data_directory, file_cfg_data_mask.format(graph_type,project))
+def fex_read_cfg_file(project,graph_type="cfg"):
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project, graph_type))
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
@@ -333,6 +407,102 @@ def fex_read_cfg_file(project):
 
     write_cfgs_to_file(project, dataset_samples)
 
+def fex_read_graph_file(project, graph_type):
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project, graph_type))
+    df = pd.read_csv(filepath, delimiter=";")
+    df = df[df[CFG_FILE].notnull()]
+
+    dataset_samples = []
+    for index, row in df.iterrows():
+        graph_filepath = row[CFG_FILE]
+        graph_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(project, graph_filepath, graph_type)
+
+        A, X, _, _ = obtain_graph_data_structures(graph_type, graph_reduced_filepath, statements_filepath)
+
+        if A is not None:
+            adjacency_matrix = list(A.ravel())
+            adjacency_matrix = [int(a) for a in adjacency_matrix]
+            features = list(X.flatten())
+            features = [int(f) for f in features]
+            dataset_samples.append((graph_reduced_filepath, row[LABEL], A.shape[0], adjacency_matrix, features))
+
+        if (index + 1) % 10 == 0:
+            write_cfgs_to_file(project, dataset_samples, graph_type)
+
+    write_cfgs_to_file(project, dataset_samples, graph_type)
+
+def debug_all_features_for_specific_graph(cfg_filepath, statements_filepath, graph_type="cfg"):
+    print(f"\n[DEBUG] Inspecting ALL features for:\n{cfg_filepath}")
+
+    A, X, _, node_order = obtain_graph_data_structures(graph_type, cfg_filepath, statements_filepath)
+    if A is None or X is None:
+        print("❌ Could not load graph or features.")
+        return
+
+    number_features_vertex_structure = 3
+    number_features_code_sequence = 8
+    number_features_memory_management = 8
+
+    # Ranges
+    vs_start, vs_end = 0, number_features_vertex_structure
+    cs_start, cs_end = vs_end, vs_end + number_features_code_sequence
+    mm_start, mm_end = cs_end, cs_end + number_features_memory_management
+
+    # Feature name mappings
+    code_seq_feature_names = [
+        "NUMERIC_CONSTANT",
+        "TRANSFER_INSTRUCTION",
+        "CALL_INSTRUCTION",
+        "ARITHMETIC_INSTRUCTION",
+        "COMPARE_INSTRUCTION",
+        "MOV_INSTRUCTION",
+        "TERMINATION_INSTRUCTION",
+        "DATA_DECLARATION_INSTRUCTION"
+    ]
+
+    mm_feature_names_by_index = {
+        ALLOCATION_FUNCTIONS: "ALLOCATION_FUNCTIONS",
+        DEALLOCATION_FUNCTIONS: "DEALLOCATION_FUNCTIONS",
+        POINTER_ASSIGNMENT: "POINTER_ASSIGNMENT",
+        MEMORY_ADDRESS_OF: "MEMORY_ADDRESS_OF",
+        CONVERT_UNSAFE: "CONVERT_UNSAFE",
+        STRING_UNSAFE: "STRING_UNSAFE",
+        SCANF_UNSAFE: "SCANF_UNSAFE",
+        OTHER_UNSAFE: "OTHER_UNSAFE"
+    }
+    mm_feature_names = [mm_feature_names_by_index[i] for i in sorted(mm_feature_names_by_index.keys())]
+
+    for i in range(X.shape[0]):
+        node_id = node_order[i]
+        vs_feats = X[i, vs_start:vs_end]
+        cs_feats = X[i, cs_start:cs_end]
+        mm_feats = X[i, mm_start:mm_end]
+
+        if any(vs_feats) or any(cs_feats) or any(mm_feats):
+            print(f"\n[Node {i} | ID {node_id}] Features:")
+
+            if any(vs_feats):
+                print("  Vertex Structure:")
+                print(f"    - Outdegree: {int(vs_feats[0])}")
+                print(f"    - Indegree: {int(vs_feats[1])}")
+                print(f"    - Num Statements: {int(vs_feats[2])}")
+
+            if any(cs_feats):
+                print("  Code Sequence Features:")
+                for j, val in enumerate(cs_feats):
+                    if val > 0:
+                        print(f"    - {code_seq_feature_names[j]}: {int(val)}")
+
+            if any(mm_feats):
+                print("  Memory Management Features:")
+                for j, val in enumerate(mm_feats):
+                    if val > 0:
+                        print(f"    - {mm_feature_names[j]}: {int(val)}")
+
+
+
+
+
 
 def write_output_file(rows, output_filepath):
     rows_list = list(set(rows))
@@ -342,26 +512,20 @@ def write_output_file(rows, output_filepath):
 
 
 def main():
-    # This is just a sample for the feature extraction of the reduced CFG already
-    cfg_name = "6-cfg"
-    cfg_filepath = os.path.join(reduced_cfg_folder, "{}.dot".format(cfg_name))
-    statements_filepath = os.path.join(statements_cfg_folder, "{}.txt".format(cfg_name))
+    projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
+    project = "linux"  # Change this to the desired project
+    graph_type_list = ["cfg"]#, "ast", "ddg"]
 
-    A, X, cfg_nx = obtain_cfg_data_structures(cfg_filepath, statements_filepath)
-    #print(A)
-    #print(X)
+    #for graph_type in graph_type_list:
+    #        print(f"\n### Processing {project} - {graph_type} ###")
+    #        fex_read_graph_file(project,graph_type)                              # from cfg_feature_extraction.py
 
-    for project in projects[3:4]:
-        fex_read_cfg_file(project)
-        write_output_file(other_cases, "other-cases.csv")
-        write_output_file(allocation_features, "allocation.csv")
-        write_output_file(deallocation_features, "deallocation.csv")
-        write_output_file(unsafe_features, "unsafe.csv")
+    #cfg_path = "output/linux-cfg-reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/73-cfg.dot"
+    #stmts_path = "output/linux-cfg-statements/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/73-cfg.txt"
+    cfg_path = "output/b90c&b388-reduced/linux-cfg-reduced-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.dot"
+    stmts_path = "output/b90c&b388-reduced/linux-cfg-statements-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.txt"
 
-        #statement_type_count = Counter(statement_types)
-        #for item in statement_type_count.most_common():
-        #    print(item)
-
+    debug_all_features_for_specific_graph(cfg_path, stmts_path)
 
 if __name__ == "__main__":
     main()

@@ -10,10 +10,13 @@ reduced_cfg_folder = "reduced-cfg-output"
 
 
 def write_statement_file(statements_cfg_directory, cfg_name, node_statements):
-    statements_filename = os.path.join(statements_cfg_directory, "{}.txt".format(cfg_name))
+    os.makedirs(statements_cfg_directory, exist_ok=True)
+    statements_filename = os.path.join(statements_cfg_directory, f"{cfg_name}.txt")
     with open(statements_filename, 'w') as output_file:
         for node in node_statements:
-            output_file.write("{} {}\n".format(node, [label[1:-1] for label in node_statements[node]]))
+            clean_labels = [label.strip('"') for label in node_statements[node]]
+            output_file.write(f"{node} {clean_labels}\n")
+
 
 
 def write_dot_file(reduced_cfg_directory, cfg_name, cfg_nx_merged):

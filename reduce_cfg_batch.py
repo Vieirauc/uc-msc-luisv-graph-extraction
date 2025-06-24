@@ -1,5 +1,8 @@
 import os
 import pandas as pd
+import networkx as nx
+import html
+from networkx.drawing.nx_pydot import from_pydot
 
 
 from cfg_extraction_constants import CFG_FILE
@@ -11,19 +14,21 @@ data_directory = "output-data"
 file_cfg_data_mask = "functions-{}-{}.csv"
 graph = "cfg"
 
-def generate_raw_cfg_artifacts(project):
-    filepath = os.path.join("output-data", f"functions-cfg-{project}.csv")
+def generate_unreduced_graph_artifacts(project, graph_type):
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project,graph_type))
     df = pd.read_csv(filepath, delimiter=";")
-    df = df[df["CFG_filepath"].notnull()]
+    df = df[df[CFG_FILE].notnull()]
 
-    for _, row in df.iterrows():
-        cfg_filepath = row["CFG_filepath"]
-        cfg_filepath_parts = cfg_filepath.split("\\")
-        cfg_filename = cfg_filepath_parts[-1]
-        cfg_name = cfg_filename.replace(".dot", "")
+    for index, row in df.iterrows():
+        graph_filepath = row[CFG_FILE]
+
+        # Caminho dividido em partes
+        graph_filepath_parts = graph_filepath.split("\\" if "\\" in graph_filepath else "/")
+        graph_filename = graph_filepath_parts[-1]
+        graph_name = graph_filename.replace(".dot", "")
 
         if project != "httpd":
-            repository_directory = cfg_filepath_parts[-2]
+            repository_directory = graph_filepath_parts[-2]
             output_commit_index = -3
             base_directory_max_index = -4
         else:
@@ -31,43 +36,49 @@ def generate_raw_cfg_artifacts(project):
             output_commit_index = -2
             base_directory_max_index = -3
 
-        output_commit = cfg_filepath_parts[output_commit_index]
-        base_directory = "/".join(cfg_filepath_parts[:base_directory_max_index])
+        output_commit = graph_filepath_parts[output_commit_index]
+        base_directory = "/".join(graph_filepath_parts[:base_directory_max_index])
 
-        graphs = read_graph(cfg_filepath, print_filepath=False)
-        if graphs:
-            cfg_dot = graphs[0]
-            cfg_nx = nx.nx_pydot.from_pydot(cfg_dot)
+        graphs = read_graph(graph_filepath)
+        if graphs is not None:
+            graph_dot = graphs[0]
+            graph_nx = nx.nx_pydot.from_pydot(graph_dot)
 
-            # Write as-is (not reduced)
-            out_reduced_dir = os.path.join(base_directory, f"{project}-reduced", output_commit, repository_directory)
-            out_statements_dir = os.path.join(base_directory, f"{project}-statements", output_commit, repository_directory)
-            os.makedirs(out_reduced_dir, exist_ok=True)
-            os.makedirs(out_statements_dir, exist_ok=True)
+            output_reduced_directory = check_created_directory(
+                base_directory, f"{project}-{graph_type}-reduced", output_commit, repository_directory)
+            output_statements_directory = check_created_directory(
+                base_directory, f"{project}-{graph_type}-statements", output_commit, repository_directory)
 
-            write_dot_file(out_reduced_dir, cfg_name, cfg_nx)
+            write_dot_file(output_reduced_directory, graph_name, graph_nx)
 
+            # Extrai labels para cada nó
             node_statements = {}
-            for node in cfg_nx.nodes():
-                node_name = str(node)
-                dot_node = cfg_dot.get_node(f'"{node_name}"')
-                if dot_node and dot_node[0].get_label():
-                    node_statements[node_name] = [dot_node[0].get_label()]
-                else:
-                    # Still write the node, but with an empty list
-                    node_statements[node_name] = []
-            
-            write_statement_file(out_statements_dir, cfg_name, node_statements)
+            for node in graph_nx.nodes():
+                try:
+                    dot_node = graph_dot.get_node(f'"{node}"')
+                    if dot_node and dot_node[0].get_label():
+                        label = dot_node[0].get_label()
+                        node_statements[str(node)] = [label]
+                    else:
+                        node_statements[str(node)] = []
+                except Exception as e:
+                    print(f"Warning: failed to get label for node {node}: {e}")
+                    node_statements[str(node)] = []
 
-def reduce_read_cfg_file(project):
-    filepath = os.path.join(data_directory, file_cfg_data_mask.format(graph,project))
+            write_statement_file(output_statements_directory, graph_name, node_statements)
+
+
+
+
+def reduce_read_cfg_file(project,graph_type="cfg"):
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project,graph_type))
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
     for index, row in df.iterrows():
         cfg_filepath = row[CFG_FILE]
 
-        cfg_filepath_parts = cfg_filepath.split("\\")
+        cfg_filepath_parts = cfg_filepath.split("\\" if "\\" in cfg_filepath else "/")
         cfg_filename = cfg_filepath_parts[-1]
         cfg_name = cfg_filename[:cfg_filename.index(".dot")]
 
@@ -89,9 +100,9 @@ def reduce_read_cfg_file(project):
             cfg_nx_merged, node_statements = reduce_graph(cfg_dot)
 
             output_reduced_directory = check_created_directory(
-                base_directory, "{}-reduced".format(project), output_commit, repository_directory)
+                base_directory, "{}-{}-reduced".format(project,graph_type), output_commit, repository_directory)
             output_statements_directory = check_created_directory(
-                base_directory, "{}-statements".format(project), output_commit, repository_directory)
+                base_directory, "{}-{}-statements".format(project,graph_type), output_commit, repository_directory)
 
             write_dot_file(output_reduced_directory, cfg_name, cfg_nx_merged)
             write_statement_file(output_statements_directory, cfg_name, node_statements)

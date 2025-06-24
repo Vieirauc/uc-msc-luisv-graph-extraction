@@ -20,12 +20,10 @@ output_directory = "output-data"
 projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
 commit_data_mask = "{}-functions.csv"
 commit_data="selected_code_units.csv"
+filepath = os.path.join(commit_data_directory, commit_data)
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 FILE_PATH = "File Path"
 VULNERABLE_FUNCTIONS = "Vulnerable File Functions"
-
-graph_type = "cfg"
-
 
 def convert_dot_to_json(project):
     project_dir = os.path.join(base_dot_directory, project)
@@ -61,7 +59,7 @@ def write_output_file(output_filename, rows):
             output_file.write(row)
 
 
-def map_functions_to_cfg(project):
+def map_functions_to_cfg(project,graph_type="cfg",csv_filename=filepath):
     # Goals of this function:
     #  1) reads the DF of functions per project
     #  2) iterates over the functions of a file in a commit
@@ -69,8 +67,8 @@ def map_functions_to_cfg(project):
     #  4) creates a CSV file with the output, with the following fields
     #     commit, filepath, function_name, CFG_filepath, vulnerable_label
     #filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
-    filepath = os.path.join(commit_data_directory, commit_data)
-    df = pd.read_csv(filepath)
+    #filepath = os.path.join(commit_data_directory, commit_data)
+    df = pd.read_csv(csv_filename)
 
     # Filter the samples without vulnerable functions
     df = df[df[VULNERABLE_FUNCTIONS].notnull()]
@@ -116,7 +114,7 @@ def map_functions_to_cfg(project):
             print(csv_row)
             csv_rows.append(csv_row)
 
-    write_output_file("functions-{}-{}.csv".format(graph_type,project), csv_rows)
+    write_output_file("functions-{}-{}.csv".format(project,graph_type), csv_rows)
 
 
 def main():
