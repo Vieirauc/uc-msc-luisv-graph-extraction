@@ -73,27 +73,100 @@ def obtain_cfg_data_structures(cfg_filepath, statements_filepath=None):
                 X = obtain_attribute_matrix(cfg_nx, node_order, statements_filepath)
     return A, X, cfg_nx
 
-def obtain_ast_features(ast_nx, node_order):
-    number_features_vertex_structure = 3
-    # Additional features can be added later.
-    X = np.zeros((len(node_order), number_features_vertex_structure))
+def obtain_ast_features(ast_nx, node_order, statements_filepath):
+    number_features_ast = 8
+    X = np.zeros((len(node_order), number_features_ast))
+
+    statement_count, statements_node = obtain_statements(statements_filepath)
+
     for i, node in enumerate(node_order):
-        X[i][0] = ast_nx.out_degree(node)
-        X[i][1] = ast_nx.in_degree(node)
-        X[i][2] = 1  # placeholder: each AST node is one statement
+        statements = statements_node.get(node, [])
+
+        # Feature 6: IS_LEAF_NODE (has no children)
+        is_leaf = ast_nx.out_degree(node) == 0
+        X[i][6] = 1 if is_leaf else 0
+
+        # Feature 7: OUT_DEGREE (structural info)
+        X[i][7] = ast_nx.out_degree(node)
+
+        for stmt in statements:
+            try:
+                stmt_type = stmt[1:stmt.index(",")].upper()
+            except Exception:
+                continue
+
+            if stmt_type.startswith("LITERAL"):
+                X[i][0] = 1
+            elif stmt_type.startswith("IDENTIFIER"):
+                X[i][1] = 1
+            elif stmt_type.startswith("CALL") or "CALL" in stmt_type:
+                X[i][2] = 1
+            elif stmt_type == "BLOCK":
+                X[i][3] = 1
+            elif stmt_type == "CONTROL_STRUCTURE":
+                X[i][4] = 1
+            elif stmt_type == "UNKNOWN":
+                X[i][5] = 1
+
     return X
 
-def obtain_ddg_features(ddg_nx, node_order):
-    number_features_vertex_structure = 3
-    X = np.zeros((len(node_order), number_features_vertex_structure))
-    for i, node in enumerate(node_order):
-        X[i][0] = ddg_nx.out_degree(node)
-        X[i][1] = ddg_nx.in_degree(node)
-        # Whether the node label includes "global" (for global variable usage)
-        label = ddg_nx.nodes[node].get("label", "").lower()
-        X[i][2] = 1 if "global" in label else 0
-    return X
 
+def obtain_pdg_features(pdg_nx, node_order, statements_filepath):
+    number_features_pdg = 7  # DDG_OUT, DDG_IN, IS_CONTROL_DEP, NUM_EDGES_TOTAL, CDG_IN, CDG_OUT, IS_PARAM
+    X = np.zeros((len(node_order), number_features_pdg))
+
+    statement_count, statements_node = obtain_statements(statements_filepath)
+
+    for i, node in enumerate(node_order):
+        num_ddg_out = 0
+        num_ddg_in = 0
+        num_cdg_out = 0
+        num_cdg_in = 0
+        total_edges = 0
+        is_control_dependent = 0
+        is_param = 0
+
+        # Verifica tipo do statement
+        stmts = statements_node.get(node, [])
+        for stmt in stmts:
+            try:
+                stmt_type = stmt[1:stmt.index(",")].upper()
+                if stmt_type == "PARAM":
+                    is_param = 1
+            except Exception:
+                continue
+
+        # Arestas de saída
+        for succ in pdg_nx.successors(node):
+            for k in pdg_nx[node][succ]:
+                edge_label = pdg_nx.edges[node, succ, k].get("label", "").strip().strip('"')
+                total_edges += 1
+                if edge_label.startswith("DDG"):
+                    num_ddg_out += 1
+                elif edge_label.startswith("CDG"):
+                    num_cdg_out += 1
+                    is_control_dependent = 1
+
+        # Arestas de entrada
+        for pred in pdg_nx.predecessors(node):
+            for k in pdg_nx[pred][node]:
+                edge_label = pdg_nx.edges[pred, node, k].get("label", "").strip().strip('"')
+                total_edges += 1
+                if edge_label.startswith("DDG"):
+                    num_ddg_in += 1
+                elif edge_label.startswith("CDG"):
+                    num_cdg_in += 1
+                    is_control_dependent = 1
+
+        X[i][0] = num_ddg_out
+        X[i][1] = num_ddg_in
+        X[i][2] = is_control_dependent
+        X[i][3] = total_edges
+        X[i][4] = num_cdg_in
+        X[i][5] = num_cdg_out
+        X[i][6] = is_param
+
+    return X
 
 def obtain_graph_data_structures(graph_type, filepath, statements_filepath=None):
     A, X, nx_graph, node_order = None, None, None, []
@@ -110,9 +183,9 @@ def obtain_graph_data_structures(graph_type, filepath, statements_filepath=None)
                 if graph_type == "cfg":
                     X = obtain_attribute_matrix(nx_graph, node_order, statements_filepath)
                 elif graph_type == "ast":
-                    X = obtain_ast_features(nx_graph, node_order)
-                elif graph_type == "ddg":
-                    X = obtain_ddg_features(nx_graph, node_order)
+                    X = obtain_ast_features(nx_graph, node_order, statements_filepath)
+                elif graph_type == "pdg":
+                    X = obtain_pdg_features(nx_graph, node_order, statements_filepath)
                 
                 return A, X, nx_graph, node_order
                 #print(f"Graph: {filepath} - A.shape: {A.shape if A is not None else None}, X.shape: {X.shape if X is not None else None}")
@@ -157,8 +230,10 @@ def obtain_statements(statements_filepath):
 
         # to read the string list, we need to use "ast"
         # str_list  = ['(RETURN,return rv;,return rv;)']
-        statements = ast.literal_eval(str_statements)
-        statement_type = [tp[1:tp.index(",")] for tp in statements]
+        #statements = ast.literal_eval(str_statements)
+        statements = [html.unescape(stmt) for stmt in ast.literal_eval(str_statements)]
+        #statement_type = [tp[1:tp.index(",")] for tp in statements]
+        statement_type = [html.unescape(tp[1:tp.index(",")]) for tp in statements]
         statement_types.extend(statement_type)
 
         statement_count[node_label] = len(statements)
@@ -200,7 +275,7 @@ def obtain_code_sequence_features(number_features_code_sequence, statements):
         node_type_id = get_node_type_id(statement_type)
         if node_type_id != -1:
             X_code_sequence[node_type_id] += 1
-    #print(types)
+    #print(types)f
     return X_code_sequence
 
 
@@ -269,17 +344,6 @@ def obtain_feature_mm_count(cfg_statement):
     list_features = {}
     statement_type = cfg_statement[1:cfg_statement.index(",")]
     statement = cfg_statement[cfg_statement.index(",")+1:-1]
-
-    '''
-    comma_index = cfg_statement.find(",")
-    if comma_index != -1:
-        statement_type = cfg_statement[1:comma_index]
-        statement = cfg_statement[comma_index+1:-1]
-    else:
-        statement_type = cfg_statement.strip("()").split(" ")[0]  # ou outro fallback seguro
-        statement = cfg_statement.strip("()")
-    '''
-
     list_features[ALLOCATION_FUNCTIONS] = count_allocation_functions(statement)
     list_features[DEALLOCATION_FUNCTIONS] = count_deallocation_functions(statement)
     list_features[POINTER_ASSIGNMENT] = count_pointer_assignment(statement_type, statement)
@@ -431,77 +495,103 @@ def fex_read_graph_file(project, graph_type):
 
     write_cfgs_to_file(project, dataset_samples, graph_type)
 
-def debug_all_features_for_specific_graph(cfg_filepath, statements_filepath, graph_type="cfg"):
-    print(f"\n[DEBUG] Inspecting ALL features for:\n{cfg_filepath}")
+def debug_all_features_for_specific_graph(graph_filepath, statements_filepath, graph_type="cfg"):
+    print(f"\n[DEBUG] Inspecting ALL features for:\n{graph_filepath}")
 
-    A, X, _, node_order = obtain_graph_data_structures(graph_type, cfg_filepath, statements_filepath)
+    A, X, _, node_order = obtain_graph_data_structures(graph_type, graph_filepath, statements_filepath)
     if A is None or X is None:
         print("❌ Could not load graph or features.")
         return
 
-    number_features_vertex_structure = 3
-    number_features_code_sequence = 8
-    number_features_memory_management = 8
+    if graph_type == "cfg":
+        number_features_vertex_structure = 3
+        number_features_code_sequence = 8
+        number_features_memory_management = 8
 
-    # Ranges
-    vs_start, vs_end = 0, number_features_vertex_structure
-    cs_start, cs_end = vs_end, vs_end + number_features_code_sequence
-    mm_start, mm_end = cs_end, cs_end + number_features_memory_management
+        # Ranges
+        vs_start, vs_end = 0, number_features_vertex_structure
+        cs_start, cs_end = vs_end, vs_end + number_features_code_sequence
+        mm_start, mm_end = cs_end, cs_end + number_features_memory_management
 
-    # Feature name mappings
-    code_seq_feature_names = [
-        "NUMERIC_CONSTANT",
-        "TRANSFER_INSTRUCTION",
-        "CALL_INSTRUCTION",
-        "ARITHMETIC_INSTRUCTION",
-        "COMPARE_INSTRUCTION",
-        "MOV_INSTRUCTION",
-        "TERMINATION_INSTRUCTION",
-        "DATA_DECLARATION_INSTRUCTION"
-    ]
+        # Feature name mappings
+        code_seq_feature_names = [
+            "NUMERIC_CONSTANT", "TRANSFER_INSTRUCTION", "CALL_INSTRUCTION",
+            "ARITHMETIC_INSTRUCTION", "COMPARE_INSTRUCTION", "MOV_INSTRUCTION",
+            "TERMINATION_INSTRUCTION", "DATA_DECLARATION_INSTRUCTION"
+        ]
 
-    mm_feature_names_by_index = {
-        ALLOCATION_FUNCTIONS: "ALLOCATION_FUNCTIONS",
-        DEALLOCATION_FUNCTIONS: "DEALLOCATION_FUNCTIONS",
-        POINTER_ASSIGNMENT: "POINTER_ASSIGNMENT",
-        MEMORY_ADDRESS_OF: "MEMORY_ADDRESS_OF",
-        CONVERT_UNSAFE: "CONVERT_UNSAFE",
-        STRING_UNSAFE: "STRING_UNSAFE",
-        SCANF_UNSAFE: "SCANF_UNSAFE",
-        OTHER_UNSAFE: "OTHER_UNSAFE"
-    }
-    mm_feature_names = [mm_feature_names_by_index[i] for i in sorted(mm_feature_names_by_index.keys())]
+        mm_feature_names_by_index = {
+            ALLOCATION_FUNCTIONS: "ALLOCATION_FUNCTIONS",
+            DEALLOCATION_FUNCTIONS: "DEALLOCATION_FUNCTIONS",
+            POINTER_ASSIGNMENT: "POINTER_ASSIGNMENT",
+            MEMORY_ADDRESS_OF: "MEMORY_ADDRESS_OF",
+            CONVERT_UNSAFE: "CONVERT_UNSAFE",
+            STRING_UNSAFE: "STRING_UNSAFE",
+            SCANF_UNSAFE: "SCANF_UNSAFE",
+            OTHER_UNSAFE: "OTHER_UNSAFE"
+        }
+        mm_feature_names = [mm_feature_names_by_index[i] for i in sorted(mm_feature_names_by_index.keys())]
 
-    for i in range(X.shape[0]):
-        node_id = node_order[i]
-        vs_feats = X[i, vs_start:vs_end]
-        cs_feats = X[i, cs_start:cs_end]
-        mm_feats = X[i, mm_start:mm_end]
+        for i in range(X.shape[0]):
+            node_id = node_order[i]
+            vs_feats = X[i, vs_start:vs_end]
+            cs_feats = X[i, cs_start:cs_end]
+            mm_feats = X[i, mm_start:mm_end]
 
-        if any(vs_feats) or any(cs_feats) or any(mm_feats):
-            print(f"\n[Node {i} | ID {node_id}] Features:")
+            if any(vs_feats) or any(cs_feats) or any(mm_feats):
+                print(f"\n[Node {i} | ID {node_id}] Features:")
 
-            if any(vs_feats):
-                print("  Vertex Structure:")
-                print(f"    - Outdegree: {int(vs_feats[0])}")
-                print(f"    - Indegree: {int(vs_feats[1])}")
-                print(f"    - Num Statements: {int(vs_feats[2])}")
+                if any(vs_feats):
+                    print("  Vertex Structure:")
+                    print(f"    - Outdegree: {int(vs_feats[0])}")
+                    print(f"    - Indegree: {int(vs_feats[1])}")
+                    print(f"    - Num Statements: {int(vs_feats[2])}")
 
-            if any(cs_feats):
-                print("  Code Sequence Features:")
-                for j, val in enumerate(cs_feats):
+                if any(cs_feats):
+                    print("  Code Sequence Features:")
+                    for j, val in enumerate(cs_feats):
+                        if val > 0:
+                            print(f"    - {code_seq_feature_names[j]}: {int(val)}")
+
+                if any(mm_feats):
+                    print("  Memory Management Features:")
+                    for j, val in enumerate(mm_feats):
+                        if val > 0:
+                            print(f"    - {mm_feature_names[j]}: {int(val)}")
+
+    elif graph_type == "ast":
+        ast_feature_names = [
+            "IS_LITERAL", "IS_IDENTIFIER", "IS_CALL_NODE",
+            "IS_BLOCK", "IS_CONTROL_STRUCTURE", "IS_UNKNOWN",
+            "IS_LEAF", "OUT_DEGREE"
+        ]
+
+        for i in range(X.shape[0]):
+            node_id = node_order[i]
+            node_feats = X[i]
+            if any(node_feats):
+                print(f"\n[Node {i} | ID {node_id}] Features:")
+                for j, val in enumerate(node_feats):
                     if val > 0:
-                        print(f"    - {code_seq_feature_names[j]}: {int(val)}")
+                        print(f"    - {ast_feature_names[j]}: {int(val)}")
 
-            if any(mm_feats):
-                print("  Memory Management Features:")
-                for j, val in enumerate(mm_feats):
+    elif graph_type == "pdg":
+        pdg_feature_names = [
+            "DDG_OUT", "DDG_IN", "IS_CONTROL_DEP",
+            "TOTAL_EDGES", "CDG_IN", "CDG_OUT", "IS_PARAM"
+        ]
+
+        for i in range(X.shape[0]):
+            node_id = node_order[i]
+            node_feats = X[i]
+            if any(node_feats):
+                print(f"\n[Node {i} | ID {node_id}] Features:")
+                for j, val in enumerate(node_feats):
                     if val > 0:
-                        print(f"    - {mm_feature_names[j]}: {int(val)}")
+                        print(f"    - {pdg_feature_names[j]}: {int(val)}")
 
-
-
-
+    else:
+        print(f"❌ Graph type '{graph_type}' is not supported.")
 
 
 def write_output_file(rows, output_filepath):
@@ -514,18 +604,22 @@ def write_output_file(rows, output_filepath):
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
     project = "linux"  # Change this to the desired project
-    graph_type_list = ["cfg"]#, "ast", "ddg"]
+    graph_type_list = ["ast"]#, "ast", "pdg"]
+    graph_type = "pdg"  # Change this to the desired graph type
+    commit_hash = "b90c062c65cc8839edfac39778a37a55ca9bda36"  # Example commit hash
+    program_name = "arch---x86---kvm---x86.c"  # Example program name
+    graph_number = "40"  # Example graph number
 
     #for graph_type in graph_type_list:
     #        print(f"\n### Processing {project} - {graph_type} ###")
     #        fex_read_graph_file(project,graph_type)                              # from cfg_feature_extraction.py
 
-    #cfg_path = "output/linux-cfg-reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/73-cfg.dot"
-    #stmts_path = "output/linux-cfg-statements/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/73-cfg.txt"
-    cfg_path = "output/b90c&b388-reduced/linux-cfg-reduced-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.dot"
-    stmts_path = "output/b90c&b388-reduced/linux-cfg-statements-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.txt"
+    cfg_path = "output/linux-{}-reduced/output-{}-{}/{}/{}-{}.dot".format(graph_type, graph_type, commit_hash, program_name, graph_number, graph_type)
+    stmts_path = "output/linux-{}-statements/output-{}-{}/{}/{}-{}.txt".format(graph_type, graph_type, commit_hash, program_name, graph_number, graph_type)
+    #cfg_path = "output/b90c&b388-reduced/linux-cfg-reduced-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.dot"
+    #stmts_path = "output/b90c&b388-reduced/linux-cfg-statements-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.txt"
 
-    debug_all_features_for_specific_graph(cfg_path, stmts_path)
+    debug_all_features_for_specific_graph(cfg_path, stmts_path, graph_type)
 
 if __name__ == "__main__":
     main()

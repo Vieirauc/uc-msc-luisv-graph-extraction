@@ -88,7 +88,7 @@ def extract_cfg_per_commit_file(project, commits_files, graph_type_list=["cfg"])
 
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
-    graph_type_list = ["cfg"]#, "ast", "ddg", "cpg"]
+    graph_type_list = ["cfg", "ast", "pdg"]
     for project in ["linux"]:
         commits_files = obtain_commits_files(project)
         extract_cfg_per_commit_file(project, commits_files,graph_type_list)

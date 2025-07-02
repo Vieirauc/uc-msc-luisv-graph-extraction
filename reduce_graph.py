@@ -3,6 +3,7 @@ from graphviz import Source
 import matplotlib.pyplot as plt
 import networkx as nx
 import os
+import html
 
 cfg_directory = "cfg-data"
 statements_cfg_folder = "statements-cfg-output"
@@ -12,10 +13,22 @@ reduced_cfg_folder = "reduced-cfg-output"
 def write_statement_file(statements_cfg_directory, cfg_name, node_statements):
     os.makedirs(statements_cfg_directory, exist_ok=True)
     statements_filename = os.path.join(statements_cfg_directory, f"{cfg_name}.txt")
+
     with open(statements_filename, 'w') as output_file:
         for node in node_statements:
-            clean_labels = [label.strip('"') for label in node_statements[node]]
+            clean_labels = []
+            for raw_label in node_statements[node]:
+                # Unescape HTML entities and strip quotes
+                label = html.unescape(raw_label).strip('"')
+
+                # If no comma is present, fake one to avoid substring error later
+                if "," not in label:
+                    label = f"<{label},>"
+
+                clean_labels.append(label)
+
             output_file.write(f"{node} {clean_labels}\n")
+
 
 
 
