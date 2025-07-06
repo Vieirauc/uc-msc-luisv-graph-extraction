@@ -13,7 +13,7 @@ target_commit = "3b365793c19aff95d1cf9bbea19f138752264d12"
 base_project_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/projects"
 commit_data_directory = "function-data"
 commit_data_mask = "{}-functions.csv"
-commit_data = "subset_linux_functions.csv"
+commit_data = "linux-functions.csv"
 filepath = os.path.join(commit_data_directory, commit_data)
 VULNERABLE_COMMIT_HASH = "Vulnerable Commit Hash"
 FILE_PATH = "File Path"
@@ -48,8 +48,8 @@ def obtain_commits_files(project):
         commits_files[commit] = df[df[VULNERABLE_COMMIT_HASH] == commit][FILE_PATH].tolist()
     print(f"Obtained {len(commits_files)} commits with files for project {project}.")
     #print commits_ffiles dictionary
-    for commit, files in commits_files.items():
-        print(f"Commit: {commit}, Files: {len(files)}")
+    #for commit, files in commits_files.items():
+        #print(f"Commit: {commit}, Files: {len(files)}")
     return commits_files
 
 
@@ -77,19 +77,74 @@ def extract_cfg_per_commit(project, commits):
 def extract_cfg_per_commit_file(project, commits_files, graph_type_list=["cfg"]):
     repository_path = os.path.join(base_project_directory, project)
     check_output_directory(base_output_directory, project)
+    
     for commit in commits_files:
+        skip_commit = True
+
+        for graph_type in graph_type_list:
+            output_directory = os.path.join(base_output_directory, project,
+                                            f"output-{graph_type}-{commit}")
+            if not os.path.exists(output_directory):
+                skip_commit = False
+                break  # If at least one graph_type is missing, we need to process this commit
+
+        if skip_commit:
+            print(f"[SKIP] All graph types already extracted for commit {commit}.")
+            continue
+
+        # Checkout to the commit
         load_commit(repository_path, commit)
+
+        # Extract graph types
         for graph_type in graph_type_list:
             cfg_directory = extract_cfg_per_file(base_output_directory, project,
-                                                repository_path, commit, commits_files[commit], graph_type)
-            map_cfg_per_function(cfg_directory)
-            save_cfg()
+                                                 repository_path, commit, 
+                                                 commits_files[commit], graph_type)
+            #map_cfg_per_function(cfg_directory)
+            #save_cfg()
+
+def summarize_extraction_status(project, graph_type_list):
+    import pandas as pd
+
+    filepath = os.path.join(commit_data_directory, commit_data)
+    df = pd.read_csv(filepath)
+
+    # Commit hashes únicos da coluna "Vulnerable Commit Hash"
+    unique_commits = set(df[VULNERABLE_COMMIT_HASH].dropna().unique())
+    print(f"\n[INFO] Total unique commits in dataset: {len(unique_commits)}")
+
+    project_output_path = os.path.join(base_output_directory, project)
+    results = {}
+
+    for graph_type in graph_type_list:
+        # Procurar diretórios do tipo output-ast-* ou output-pdg-* etc
+        extracted_commits = {
+            folder.split(f"output-{graph_type}-")[-1]
+            for folder in os.listdir(project_output_path)
+            if folder.startswith(f"output-{graph_type}-")
+        }
+
+        missing_commits = unique_commits - extracted_commits
+
+        print(f"\n[{graph_type.upper()}]")
+        print(f"✓ Extracted: {len(extracted_commits)}")
+        print(f"✗ Missing:   {len(missing_commits)}")
+
+        results[graph_type] = {
+            "extracted": len(extracted_commits),
+            "missing": len(missing_commits),
+            "done_commits": list(extracted_commits),
+            "missing_commits": list(missing_commits),
+        }
+
+    return results
 
 
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
-    graph_type_list = ["cfg", "ast", "pdg"]
+    graph_type_list = ["ast", "pdg"]
     for project in ["linux"]:
+        summarize_extraction_status(project, graph_type_list)
         commits_files = obtain_commits_files(project)
         extract_cfg_per_commit_file(project, commits_files,graph_type_list)
         for graph_type in graph_type_list:
