@@ -10,7 +10,7 @@ from cfg_feature_extraction import fex_read_cfg_file, fex_read_graph_file
 
 target_commit = "3b365793c19aff95d1cf9bbea19f138752264d12"
 
-base_project_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/projects"
+base_project_directory = "/home/lucaspc/tese/projects"
 commit_data_directory = "function-data"
 commit_data_mask = "{}-functions.csv"
 commit_data = "linux-functions.csv"
@@ -20,7 +20,7 @@ FILE_PATH = "File Path"
 SUBSET = True
 GRAPH_TYPE = "ast"
 
-base_output_directory = "C:/Users/luka3/Desktop/UC/MSI/Tese/code/uc-msc-luisv-graph_extractor/output"
+base_output_directory = "/home/lucaspc/tese/output"
 
 
 def obtain_commits(project):
