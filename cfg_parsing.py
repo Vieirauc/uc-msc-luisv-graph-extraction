@@ -43,7 +43,7 @@ def get_graph_name(cfg_directory, filename):
     if graphs is None:
         return ""
     graph = graphs[0]
-    print(filename, graph.get_name().replace('"', ''))
+    #print(filename, graph.get_name().replace('"', ''))
     return graph.get_name().replace('"', '')
 
 

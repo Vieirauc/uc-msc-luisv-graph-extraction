@@ -20,7 +20,7 @@ FILE_PATH = "File Path"
 SUBSET = True
 GRAPH_TYPE = "ast"
 
-base_output_directory = "/home/lucaspc/tese/output"
+base_output_directory = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output"
 
 
 def obtain_commits(project):
@@ -141,6 +141,7 @@ def summarize_extraction_status(project, graph_type_list):
 
 
 def main():
+    # source venv/bin/activate
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
     graph_type_list = ["ast", "pdg"]
     for project in ["linux"]:

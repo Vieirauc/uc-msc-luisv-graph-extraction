@@ -1,9 +1,9 @@
 import os
 import subprocess
 
-JOERN_CLI_DIR = r"C:\Users\luka3\Desktop\UC\MSI\Tese\code\uc-msc-luisv-graph_extractor\tools\joern\joern\joern-cli"
-JOERN_PARSE = os.path.join(JOERN_CLI_DIR, "joern-parse.bat")  # or joern-parse if .bat not needed
-JOERN_EXPORT = os.path.join(JOERN_CLI_DIR, "joern-export.bat")
+JOERN_CLI_DIR = r"/home/lucaspc/tese/uc-msc-luisv-graph_extractor/tools/joern-cli"
+JOERN_PARSE = os.path.join(JOERN_CLI_DIR, "joern-parse")  # or joern-parse if .bat not needed
+JOERN_EXPORT = os.path.join(JOERN_CLI_DIR, "joern-export")
 
 
 def obtain_directories(repository_path, run_per_directory):
@@ -16,7 +16,7 @@ def obtain_directories(repository_path, run_per_directory):
 
 
 def extract_cfg(base_output_directory, project, repository_path, commit, run_per_directory=False):
-    os.environ["PATH"] += os.pathsep + r"C:\Users\luka3\Desktop\UC\MSI\Tese\code\uc-msc-luisv-graph_extractor\cfg_env\joern\joern\joern-cli"
+    os.environ["PATH"] += os.pathsep + r"/home/lucaspc/tese/uc-msc-luisv-graph_extractor/tools/joern-cli"
     # joern-parse  --language c [repository_path]
     # joern-export --repr cfg --out [output_directory]
 
@@ -41,7 +41,7 @@ def extract_cfg(base_output_directory, project, repository_path, commit, run_per
 
 
 def extract_cfg_per_file(base_output_directory, project, repository_path, commit, files, graph_type):
-    os.environ["PATH"] += os.pathsep + r"C:\Users\luka3\Desktop\UC\MSI\Tese\code\cfg-extractor\cfg_env\joern\joern\joern-cli"
+    os.environ["PATH"] += os.pathsep + r"/home/lucaspc/tese/uc-msc-luisv-graph_extractor/tools/joern-cli"
     # joern-parse [repository_path]
     # joern-export --repr cfg --out [output_directory]
 
