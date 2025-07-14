@@ -5,79 +5,7 @@ import json
 import ast
 import sys
 
-# File paths
-cfg_dataset_path = "C:\\Users\\luka3\\Desktop\\UC\\MSI\\Tese\\code\\uc-msc-luisv-cfg-dataset\\datasets\\cfg-dataset-linux-v0.5.csv"
-linux_functions_path = "C:\\Users\\luka3\\Desktop\\UC\\MSI\\Tese\\code\\uc-msc-luisv-graph_extractor\\function-data\\linux-functions.csv"
-extractor_output_path = "output\cfg-dataset-linux.csv"
 
-# Load datasets
-cfg_dataset_df = pd.read_csv(cfg_dataset_path, delimiter=";")
-linux_functions_df = pd.read_csv(linux_functions_path)
-csv.field_size_limit(10**7)
-
-# Extract commit hashes and file paths from CFG dataset
-def extract_commit_and_filepath(cfg_path):
-    match = re.search(r'output-cfg-([a-f0-9]+)/(.+?)/\d+-cfg\.dot$', str(cfg_path))
-    if match:
-        return match.group(1), match.group(2).replace('---', '/')
-    return None, None
-
-cfg_dataset_df["Commit Hash"], cfg_dataset_df["Linux File Path"] = zip(
-    *cfg_dataset_df["cfg_filepath"].apply(extract_commit_and_filepath)
-)
-
-# Function to filter functions based on user selection
-def select_code_units(vulnerable=True, cfg_size=1, num_samples=10):
-    """
-    Selects a specified number of vulnerable or non-vulnerable functions
-    that generate CFGs of the given size.
-    
-    :param vulnerable: Boolean - True for vulnerable functions, False for non-vulnerable.
-    :param cfg_size: int - Size of the CFG (1 for single-node, >1 for multi-node).
-    :param num_samples: int - Number of functions to retrieve.
-    :return: DataFrame - Filtered functions in the same format as linux-functions.csv.
-    """
-
-    # Filter CFG dataset by size
-    if cfg_size == 1:
-        cfg_filtered = cfg_dataset_df[cfg_dataset_df["size"] == 1]
-    else:
-        cfg_filtered = cfg_dataset_df[cfg_dataset_df["size"] > 1]
-
-    # Filter Linux functions dataset to only include entries that match the CFG dataset
-    filtered_functions = linux_functions_df[
-        (linux_functions_df["File Path"].isin(cfg_filtered["Linux File Path"])) &
-        (linux_functions_df["Vulnerable Commit Hash"].isin(cfg_filtered["Commit Hash"]))
-    ]
-
-    # Select vulnerable or non-vulnerable functions
-    if vulnerable:
-        selected_functions = filtered_functions[filtered_functions["Vulnerable File Functions"].notna()]
-    else:
-        selected_functions = filtered_functions[filtered_functions["Vulnerable File Functions"].isna()]
-
-    # Sample the requested number of functions
-    selected_subset = selected_functions.sample(n=min(num_samples, len(selected_functions)), random_state=42)
-
-    return selected_subset
-
-def create_subset_linux_functions(num_entries=10, output_path="subset_linux_functions.csv"):
-    """
-    Creates a random subset of entries from linux-functions.csv and saves it as a new CSV file.
-    
-    :param num_entries: Number of entries to select.
-    :param output_path: Path to save the subset CSV file.
-    :return: The subset DataFrame.
-    """
-    
-    # Sample entries
-    subset_df = linux_functions_df.sample(n=min(num_entries, len(linux_functions_df)), random_state=42)
-    
-    # Save to CSV
-    subset_df.to_csv(output_path, index=False)
-    
-    print(f"Subset of {len(subset_df)} entries saved to {output_path}")
-    return subset_df
 
 def count_functions_per_program(csv_file_path):
     """
@@ -169,20 +97,121 @@ def get_largest_graph_info(csv_path):
     print(f"  Linha no CSV: {max_line_number}")
     return max_cfg_path, max_size, max_line_number
 
+import pandas as pd
 
-# Example usage for function counting
-#file_path = "function-data\\subset_linux_functions.csv"
-#functions_count = count_functions_per_program(file_path)
-#for program, count in functions_count.items():
-#     print(f"{program}: {count} functions")
+import pandas as pd
+import numpy as np
+
+def describe_large_dataset(input_path, chunksize=5000):
+    total, num_vuln, num_safe = 0, 0, 0
+    min_size, max_size = float('inf'), 0
+    max_size_filepath = None
+    all_sizes = []
+
+    print(f"📊 Lendo estatísticas do dataset: {input_path}")
+
+    for chunk in pd.read_csv(input_path, sep=';', chunksize=chunksize):
+        chunk['label'] = chunk['label'].astype(bool)
+
+        total += len(chunk)
+        num_vuln += chunk['label'].sum()
+        num_safe += len(chunk) - chunk['label'].sum()
+
+        # Acumula tamanhos para média e percentil
+        all_sizes.extend(chunk['size'].tolist())
+
+        chunk_max_size = chunk['size'].max()
+        chunk_min_size = chunk['size'].min()
+
+        if chunk_max_size > max_size:
+            max_size = chunk_max_size
+            max_size_filepath = chunk.loc[chunk['size'].idxmax(), 'cfg_filepath']
+
+        min_size = min(min_size, chunk_min_size)
+
+        print(f"🔄 Acumulado: {total} linhas...")
+
+    prop_vuln = num_vuln / total if total > 0 else 0
+    mean_size = np.mean(all_sizes)
+    p95_size = np.percentile(all_sizes, 95)
+
+    print("\n📈 Estatísticas finais:")
+    print(f"Total de funções: {total}")
+    print(f"Funções vulneráveis: {num_vuln}")
+    print(f"Funções não vulneráveis: {num_safe}")
+    print(f"Proporção vulneráveis: {prop_vuln:.2%}")
+    print(f"Tamanho mínimo do grafo: {min_size}")
+    print(f"Tamanho máximo do grafo: {max_size}")
+    print(f" ↪️ Arquivo correspondente ao maior grafo: {max_size_filepath}")
+    print(f"Tamanho médio dos grafos: {mean_size:.2f}")
+    print(f"95º percentil do tamanho dos grafos: {p95_size:.2f}")
+
+    return {
+        'total': total,
+        'num_vuln': num_vuln,
+        'num_safe': num_safe,
+        'prop_vuln': prop_vuln,
+        'min_size': min_size,
+        'max_size': max_size,
+        'max_size_filepath': max_size_filepath,
+        'mean_size': mean_size,
+        'p95_size': p95_size
+    }
+
+
+def undersample_large_dataset(input_path, output_path, ratio=0.5, max_total=20000, chunksize=5000):
+    n_vuln = int(max_total * ratio)
+    n_safe = max_total - n_vuln
+
+    vuln_collected, safe_collected = 0, 0
+    first_write = True
+
+    print(f"\n Iniciando undersampling: {n_vuln} vulneráveis + {n_safe} não vulneráveis")
+    
+    for chunk in pd.read_csv(input_path, sep=';', chunksize=chunksize):
+        chunk['label'] = chunk['label'].astype(bool)
+        
+        vuln_needed = n_vuln - vuln_collected
+        safe_needed = n_safe - safe_collected
+
+        vuln_chunk = chunk[chunk['label'] == True]
+        safe_chunk = chunk[chunk['label'] == False]
+
+        vuln_sample = vuln_chunk.sample(min(len(vuln_chunk), vuln_needed), random_state=42) if vuln_needed > 0 else pd.DataFrame(columns=chunk.columns)
+        safe_sample = safe_chunk.sample(min(len(safe_chunk), safe_needed), random_state=42) if safe_needed > 0 else pd.DataFrame(columns=chunk.columns)
+
+        sampled_chunk = pd.concat([vuln_sample, safe_sample])
+        vuln_collected += len(vuln_sample)
+        safe_collected += len(safe_sample)
+
+        sampled_chunk.to_csv(output_path, sep=';', index=False, mode='w' if first_write else 'a', header=first_write)
+        first_write = False
+
+        print(f"✅ Coletados: {vuln_collected} vulneráveis, {safe_collected} não vulneráveis")
+
+        if vuln_collected >= n_vuln and safe_collected >= n_safe:
+            break
+
+    print(f"\n🎯 Dataset final salvo em: {output_path}")
+    print(f"Total final: {vuln_collected + safe_collected}")
+    print(f"Vulneráveis: {vuln_collected}, Não vulneráveis: {safe_collected}")
 
 def main():
-    path, size, line = get_largest_graph_info(extractor_output_path)
-    results = check_memory_features_in_graphs(extractor_output_path)
+    input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/ast-dataset-linux_undersampled.csv"
+    #input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/ast-dataset-linux.csv"
+    output_dataset = input_dataset.replace(".csv", "_undersampled.csv")
 
-    print("Graphs with memory management features:")
-    for path in results:
-        print(path)
+    describe_large_dataset(input_dataset, chunksize=10000)
+
+    '''
+    undersample_large_dataset(
+        input_path=input_dataset,
+        output_path=output_dataset,
+        ratio=0.5,
+        max_total=20000,
+        chunksize=5000
+    )
+    '''
 
 if __name__ == "__main__":
     main()

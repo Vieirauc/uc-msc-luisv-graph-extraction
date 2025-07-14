@@ -423,7 +423,7 @@ def obtain_node_types(cfg_dot):
 
 
 def obtain_reduced_statement_filepath(project, cfg_filepath, graph_type="cfg"):
-    cfg_filepath_parts = cfg_filepath.split("\\")
+    cfg_filepath_parts = cfg_filepath.split("/")
 
     cfg_filename = cfg_filepath_parts[-1]
     cfg_name = cfg_filename[:cfg_filename.index(".dot")]
@@ -447,7 +447,7 @@ def obtain_reduced_statement_filepath(project, cfg_filepath, graph_type="cfg"):
 
 
 def fex_read_cfg_file(project,graph_type="cfg"):
-    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project, graph_type))
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(graph_type,project))
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
@@ -472,16 +472,41 @@ def fex_read_cfg_file(project,graph_type="cfg"):
     write_cfgs_to_file(project, dataset_samples)
 
 def fex_read_graph_file(project, graph_type):
-    filepath = os.path.join(data_directory, file_cfg_data_mask.format(project, graph_type))
+    filepath = os.path.join(data_directory, file_cfg_data_mask.format(graph_type, project))
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
+    # --- Step 1: Load already-processed file paths if the output file exists
+    processed_paths = set()
+    graph_dataset_filepath = os.path.join(
+        "output", project, f"{graph_type}-dataset-{project}.csv"
+    )
+    if os.path.exists(graph_dataset_filepath):
+        with open(graph_dataset_filepath, "r") as f:
+            for line in f:
+                parts = line.strip().split(";")
+                if parts:
+                    processed_paths.add(parts[0])  # cfg_filepath
+
+    total = len(df)
     dataset_samples = []
+
     for index, row in df.iterrows():
         graph_filepath = row[CFG_FILE]
-        graph_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(project, graph_filepath, graph_type)
 
-        A, X, _, _ = obtain_graph_data_structures(graph_type, graph_reduced_filepath, statements_filepath)
+        # --- Step 2: Skip if already processed
+        if graph_filepath in processed_paths:
+            print(f"[{index + 1}/{total}] Skipping (already processed): {graph_filepath}")
+            continue
+
+        print(f"[{index + 1}/{total}] Processing graph: {graph_filepath}")
+
+        try:
+            graph_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(project, graph_filepath, graph_type)
+            A, X, _, _ = obtain_graph_data_structures(graph_type, graph_reduced_filepath, statements_filepath)
+        except Exception as e:
+            print(f"[ERROR] Failed processing {graph_filepath}: {e}")
+            continue
 
         if A is not None:
             adjacency_matrix = list(A.ravel())
@@ -494,6 +519,7 @@ def fex_read_graph_file(project, graph_type):
             write_cfgs_to_file(project, dataset_samples, graph_type)
 
     write_cfgs_to_file(project, dataset_samples, graph_type)
+
 
 def debug_all_features_for_specific_graph(graph_filepath, statements_filepath, graph_type="cfg"):
     print(f"\n[DEBUG] Inspecting ALL features for:\n{graph_filepath}")
@@ -610,16 +636,16 @@ def main():
     program_name = "arch---x86---kvm---x86.c"  # Example program name
     graph_number = "40"  # Example graph number
 
-    #for graph_type in graph_type_list:
-    #        print(f"\n### Processing {project} - {graph_type} ###")
-    #        fex_read_graph_file(project,graph_type)                              # from cfg_feature_extraction.py
+    for graph_type in graph_type_list:
+            print(f"\n### Processing {project} - {graph_type} ###")
+            fex_read_graph_file(project,graph_type)                              # from cfg_feature_extraction.py
 
     cfg_path = "output/linux-{}-reduced/output-{}-{}/{}/{}-{}.dot".format(graph_type, graph_type, commit_hash, program_name, graph_number, graph_type)
     stmts_path = "output/linux-{}-statements/output-{}-{}/{}/{}-{}.txt".format(graph_type, graph_type, commit_hash, program_name, graph_number, graph_type)
     #cfg_path = "output/b90c&b388-reduced/linux-cfg-reduced-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.dot"
     #stmts_path = "output/b90c&b388-reduced/linux-cfg-statements-b90c&b388reduced/output-cfg-b90c062c65cc8839edfac39778a37a55ca9bda36/arch---x86---kvm---x86.c/84-cfg.txt"
 
-    debug_all_features_for_specific_graph(cfg_path, stmts_path, graph_type)
+    #debug_all_features_for_specific_graph(cfg_path, stmts_path, graph_type)
 
 if __name__ == "__main__":
     main()

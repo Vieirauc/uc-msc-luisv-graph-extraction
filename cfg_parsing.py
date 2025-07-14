@@ -1,6 +1,7 @@
 import os
 import pydot
 import re
+import html
 
 
 files_with_problems = []
@@ -27,14 +28,14 @@ def adjust_file(filepath):
     return graphs
 
 
-def read_graph(filepath, print_filepath=True):
+def read_graph(filepath, print_filepath=False):
     graphs = pydot.graph_from_dot_file(filepath)
     if print_filepath:
         print(filepath)
     return graphs
 
 
-def get_graph_name(cfg_directory, filename):
+def get_graph_name(cfg_directory, filename, verbose=False):
     filepath = os.path.join(cfg_directory, filename)
     graphs = read_graph(filepath)
     if graphs is None:
@@ -43,8 +44,12 @@ def get_graph_name(cfg_directory, filename):
     if graphs is None:
         return ""
     graph = graphs[0]
-    #print(filename, graph.get_name().replace('"', ''))
-    return graph.get_name().replace('"', '')
+    name = graph.get_name().replace('"', '')
+    name = html.unescape(name)
+    if verbose:
+        print(filename, name)
+    
+    return name
 
 
 def map_cfg_per_function(cfg_directory):

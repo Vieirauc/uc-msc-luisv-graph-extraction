@@ -4,7 +4,7 @@ from cfg_persistence import save_cfg
 import os
 import pandas as pd
 from version_management import load_commit
-from convert_dot_to_json import map_functions_to_cfg
+from convert_dot_to_json import map_functions_to_graph
 from reduce_cfg_batch import reduce_read_cfg_file, generate_unreduced_graph_artifacts
 from cfg_feature_extraction import fex_read_cfg_file, fex_read_graph_file
 
@@ -74,7 +74,7 @@ def extract_cfg_per_commit(project, commits):
         save_cfg()
 
 
-def extract_cfg_per_commit_file(project, commits_files, graph_type_list=["cfg"]):
+def extract_cfg_per_commit_file(project, commits_files, graph_type_list=["ast", "pdg"]):
     repository_path = os.path.join(base_project_directory, project)
     check_output_directory(base_output_directory, project)
     
@@ -143,7 +143,7 @@ def summarize_extraction_status(project, graph_type_list):
 def main():
     # source venv/bin/activate
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
-    graph_type_list = ["ast", "pdg"]
+    graph_type_list = ["pdg"]
     for project in ["linux"]:
         summarize_extraction_status(project, graph_type_list)
         commits_files = obtain_commits_files(project)
@@ -153,7 +153,7 @@ def main():
             # Extract the CFG for the listed files only
             
              # calls extract_cfg_per_file from cfg_extraction.py
-            map_functions_to_cfg(project,graph_type,csv_filename=filepath)                     # from convert_dot_to_json.py
+            map_functions_to_graph(project,graph_type,csv_filename=filepath)                     # from convert_dot_to_json.py
             generate_unreduced_graph_artifacts(project,graph_type)                     # from reduce_cfg_batch.py (skips the reduction)
             #reduce_read_cfg_file(project,graph_type)                              # from reduce_cfg_batch.py
             fex_read_graph_file(project,graph_type)                              # from cfg_feature_extraction.py

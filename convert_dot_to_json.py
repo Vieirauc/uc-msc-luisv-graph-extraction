@@ -13,6 +13,7 @@ from networkx.readwrite import json_graph
 import json
 import os
 import pandas as pd
+from tqdm import tqdm
 
 base_dot_directory = "output"
 commit_data_directory = "function-data"
@@ -46,75 +47,110 @@ def directory_per_file(project):
     return project in ["glibc", "gecko-dev", "linux"]
 
 
-def write_output_file(output_filename, rows):
+def write_output_file_append(output_filename, row):
     header = 'commit;filepath;function_name;CFG_filepath;vulnerable_label\n'
     output_filepath = os.path.join(output_directory, output_filename)
+    
+    if not os.path.exists(output_filepath):
+        if not os.path.exists(output_directory):
+            os.mkdir(output_directory)
+        with open(output_filepath, 'w') as output_file:
+            output_file.write(header)
+    
+    with open(output_filepath, 'a') as output_file:
+        output_file.write(row)
 
-    if not os.path.exists(output_directory):
-        os.mkdir(output_directory)
+def map_functions_to_graph(project, graph_type="ast", csv_filename=None):
+    import re
 
-    with open(output_filepath, 'w') as output_file:
-        output_file.write(header)
-        for row in rows:
-            output_file.write(row)
+    filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
 
+    output_name = f"functions-{graph_type}-{project}.csv"
+    output_path = os.path.join(output_directory, output_name)
 
-def map_functions_to_cfg(project,graph_type="cfg",csv_filename=filepath):
-    # Goals of this function:
-    #  1) reads the DF of functions per project
-    #  2) iterates over the functions of a file in a commit
-    #  3) finds the corresponding CFG file (.dot) of the function
-    #  4) creates a CSV file with the output, with the following fields
-    #     commit, filepath, function_name, CFG_filepath, vulnerable_label
-    #filepath = os.path.join(commit_data_directory, commit_data_mask.format(project))
-    #filepath = os.path.join(commit_data_directory, commit_data)
-    df = pd.read_csv(csv_filename)
+    # ✅ Carregar funções já processadas
+    processed_keys = set()
+    if os.path.exists(output_path):
+        with open(output_path, 'r') as f:
+            next(f)
+            for line in f:
+                parts = line.strip().split(";")
+                if len(parts) >= 3:
+                    processed_keys.add((parts[0], parts[1], parts[2]))
 
-    # Filter the samples without vulnerable functions
+    # ✅ Filtrar apenas commits que ainda têm funções por processar
+    def has_unprocessed_functions(row):
+        try:
+            functions = json.loads(row[VULNERABLE_FUNCTIONS])
+        except Exception:
+            return False
+        for f in functions:
+            key = (row[VULNERABLE_COMMIT_HASH], row[FILE_PATH], f["Name"])
+            if key not in processed_keys:
+                return True
+        return False
+
+    df = pd.read_csv(filepath)
     df = df[df[VULNERABLE_FUNCTIONS].notnull()]
+    df = df[df.apply(has_unprocessed_functions, axis=1)]
 
-    csv_rows = []
-    for index, row in df.iterrows():
+    print(f"[INFO] Mapping functions to {graph_type.upper()} graphs for project: {project}")
+    print(f"[INFO] {len(processed_keys)} functions already processed (checkpointing enabled)")
+    print(f"[INFO] {len(df)} commits/files need processing")
+
+    processed_count = 0
+    for i, (_, row) in enumerate(df.iterrows(), 1):
         commit = row[VULNERABLE_COMMIT_HASH]
-        filepath = row[FILE_PATH]
+        file_path = row[FILE_PATH]
 
-        cfg_output_directory = os.path.join(base_dot_directory, project, "output-{}-{}".format(graph_type, commit))
+        cfg_output_directory = os.path.join(base_dot_directory, project, f"output-{graph_type}-{commit}")
         if directory_per_file(project):
-            filepath_directory = filepath.replace("/", "---")
+            filepath_directory = file_path.replace("/", "---")
             cfg_output_directory = os.path.join(cfg_output_directory, filepath_directory)
 
-        map_function_name_cfgfile = {}
-        for cfg_file in os.listdir(cfg_output_directory):
-            function_name_dot = get_graph_name(cfg_output_directory, cfg_file)
-            map_function_name_cfgfile[function_name_dot] = os.path.join(cfg_output_directory, cfg_file)
+        try:
+            cfg_files = os.listdir(cfg_output_directory)
+        except FileNotFoundError:
+            print(f"[WARN] Missing graph directory: {cfg_output_directory}")
+            continue
 
-        functions = json.loads(row[VULNERABLE_FUNCTIONS])
+        map_function_name_cfgfile = {
+            get_graph_name(cfg_output_directory, cfg_file): os.path.join(cfg_output_directory, cfg_file)
+            for cfg_file in cfg_files
+        }
+
+        try:
+            functions = json.loads(row[VULNERABLE_FUNCTIONS])
+        except json.JSONDecodeError:
+            print(f"[ERROR] Could not parse functions in {file_path}@{commit}")
+            continue
+
         for function in functions:
             function_name = function["Name"]
+            key = (commit, file_path, function_name)
+
+            if key in processed_keys:
+                continue
+
             vulnerable = function["Vulnerable"] == "Yes"
+            cfg_filepath = map_function_name_cfgfile.get(function_name, "")
 
-            if function_name in map_function_name_cfgfile:
-                cfg_filepath = map_function_name_cfgfile[function_name]
-            else:
-                # some cases are not found due to the "scope resolution operator" (::)
-                # for instance, "nsIndexedToHTML::AsyncConvertData", but in the CSV file
-                # only "AsyncConvertData" is present.
-                # So we need to find it regardless the scope operator.
-                function_in_map = ["::{}".format(function_name) in k for k in map_function_name_cfgfile.keys()]
-
-                if True in function_in_map:
-                    key_index = function_in_map.index(True)
-                    complete_function_name = list(map_function_name_cfgfile.keys())[key_index]
-                    cfg_filepath = map_function_name_cfgfile[complete_function_name]
+            if not cfg_filepath:
+                scoped_matches = [k for k in map_function_name_cfgfile if f"::{function_name}" in k]
+                if scoped_matches:
+                    cfg_filepath = map_function_name_cfgfile[scoped_matches[0]]
                 else:
+                    print(f"[WARN] Não encontrou função: {function_name} em {file_path}@{commit}")
                     cfg_filepath = ""
-                    print("Houston, we have a problem...")
 
-            csv_row = "{};{};{};{};{}\n".format(commit, filepath, function_name, cfg_filepath, vulnerable)
-            print(csv_row)
-            csv_rows.append(csv_row)
+            csv_row = f"{commit};{file_path};{function_name};{cfg_filepath};{vulnerable}\n"
+            write_output_file_append(output_name, csv_row)
 
-    write_output_file("functions-{}-{}.csv".format(project,graph_type), csv_rows)
+        processed_count += 1
+        if processed_count % 50 == 0:
+            print(f"[INFO] {processed_count}/{len(df)} commits/files processed...")
+
+    print(f"[DONE] Finished mapping functions to {graph_type.upper()} for {project}")
 
 
 def main():
