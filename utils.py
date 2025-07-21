@@ -4,6 +4,7 @@ import csv
 import json
 import ast
 import sys
+import os
 
 
 
@@ -159,59 +160,103 @@ def describe_large_dataset(input_path, chunksize=5000):
     }
 
 
-def undersample_large_dataset(input_path, output_path, ratio=0.5, max_total=20000, chunksize=5000):
-    n_vuln = int(max_total * ratio)
-    n_safe = max_total - n_vuln
+import os
+import random
 
-    vuln_collected, safe_collected = 0, 0
-    first_write = True
+def undersample_adaptive_chunked(input_path, output_path, max_total=10000, min_vuln_ratio=0.3):
+    vuln_count = 0
+    non_vuln_temp = output_path.replace(".csv", "_nonvuln_temp.csv")
+    print(f"\n🔍 Iniciando undersampling (sem pandas, só I/O)...")
 
-    print(f"\n Iniciando undersampling: {n_vuln} vulneráveis + {n_safe} não vulneráveis")
-    
-    for chunk in pd.read_csv(input_path, sep=';', chunksize=chunksize):
-        chunk['label'] = chunk['label'].astype(bool)
-        
-        vuln_needed = n_vuln - vuln_collected
-        safe_needed = n_safe - safe_collected
+    with open(input_path, "r") as fin, \
+         open(output_path, "w") as fout_vuln, \
+         open(non_vuln_temp, "w") as fout_nonvuln:
 
-        vuln_chunk = chunk[chunk['label'] == True]
-        safe_chunk = chunk[chunk['label'] == False]
+        header = fin.readline()
+        fout_vuln.write(header)
+        fout_nonvuln.write(header)
 
-        vuln_sample = vuln_chunk.sample(min(len(vuln_chunk), vuln_needed), random_state=42) if vuln_needed > 0 else pd.DataFrame(columns=chunk.columns)
-        safe_sample = safe_chunk.sample(min(len(safe_chunk), safe_needed), random_state=42) if safe_needed > 0 else pd.DataFrame(columns=chunk.columns)
+        label_idx = header.strip().split(";").index("label")
 
-        sampled_chunk = pd.concat([vuln_sample, safe_sample])
-        vuln_collected += len(vuln_sample)
-        safe_collected += len(safe_sample)
+        for i, line in enumerate(fin):
+            if not line.strip():
+                continue
 
-        sampled_chunk.to_csv(output_path, sep=';', index=False, mode='w' if first_write else 'a', header=first_write)
-        first_write = False
+            parts = line.strip().split(";")
+            label = parts[label_idx].strip().lower()
 
-        print(f"✅ Coletados: {vuln_collected} vulneráveis, {safe_collected} não vulneráveis")
+            if label in ["1", "true", "yes"]:
+                fout_vuln.write(line)
+                vuln_count += 1
+            else:
+                fout_nonvuln.write(line)
 
-        if vuln_collected >= n_vuln and safe_collected >= n_safe:
-            break
+            if i % 100000 == 0:
+                print(f"🔄 Processadas {i} linhas...")
 
+    print(f"✅ Vulneráveis encontrados: {vuln_count}")
+
+    # Etapa 2: decidir limites
+    if vuln_count >= max_total:
+        vuln_keep = int(max_total * min_vuln_ratio)
+        nonvuln_needed = max_total - vuln_keep
+        skip_vuln = vuln_count - vuln_keep
+        print(f"⚠️ Usando ratio mínima de {min_vuln_ratio*100:.1f}%. Mantendo {vuln_keep} vulneráveis")
+    else:
+        vuln_keep = vuln_count
+        nonvuln_needed = max_total - vuln_keep
+        skip_vuln = 0
+        print(f"✂️ Mantendo todos os {vuln_keep} vulneráveis")
+
+    # Etapa 3: reescrever apenas N vulneráveis
+    with open(output_path, "r") as vin, open(output_path + ".tmp", "w") as vout:
+        vout.write(vin.readline())  # header
+        kept = 0
+        for line in vin:
+            if skip_vuln > 0:
+                skip_vuln -= 1
+                continue
+            if kept >= vuln_keep:
+                break
+            vout.write(line)
+            kept += 1
+    os.replace(output_path + ".tmp", output_path)
+
+    # Etapa 4: sample de não vulneráveis por reservoir
+    print(f"📦 Amostrando {nonvuln_needed} não vulneráveis (modo streaming)")
+    reservoir = []
+    line_count = 0
+    with open(non_vuln_temp, "r") as f:
+        _ = f.readline()  # skip header
+        for line in f:
+            line_count += 1
+            if len(reservoir) < nonvuln_needed:
+                reservoir.append(line)
+            else:
+                r = random.randint(0, line_count)
+                if r < nonvuln_needed:
+                    reservoir[r] = line
+
+    with open(output_path, "a") as fout:
+        for line in reservoir:
+            fout.write(line)
+
+    os.remove(non_vuln_temp)
     print(f"\n🎯 Dataset final salvo em: {output_path}")
-    print(f"Total final: {vuln_collected + safe_collected}")
-    print(f"Vulneráveis: {vuln_collected}, Não vulneráveis: {safe_collected}")
+    print(f"Estimado: {vuln_keep + nonvuln_needed} linhas totais")
+
+
 
 def main():
-    input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/ast-dataset-linux_undersampled.csv"
+    input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/cfg-dataset-linux.csv"
     #input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/ast-dataset-linux.csv"
-    output_dataset = input_dataset.replace(".csv", "_undersampled.csv")
+    output_dataset = input_dataset.replace(".csv", "_undersampled10k.csv")
 
-    describe_large_dataset(input_dataset, chunksize=10000)
+    describe_large_dataset("output/pdg-dataset-linux_undersampled10k.csv", chunksize=10000)
 
-    '''
-    undersample_large_dataset(
-        input_path=input_dataset,
-        output_path=output_dataset,
-        ratio=0.5,
-        max_total=20000,
-        chunksize=5000
-    )
-    '''
+    
+    #undersample_adaptive_chunked(input_path="output/ast-dataset-linux.csv",output_path="output/ast-dataset-linux_undersampled10k.csv",max_total=10000,min_vuln_ratio=0.2)
+    
 
 if __name__ == "__main__":
     main()

@@ -476,17 +476,19 @@ def fex_read_graph_file(project, graph_type):
     df = pd.read_csv(filepath, delimiter=";")
     df = df[df[CFG_FILE].notnull()]
 
-    # --- Step 1: Load already-processed file paths if the output file exists
+    # --- Step 1: Load already-processed reduced file paths
     processed_paths = set()
-    graph_dataset_filepath = os.path.join(
-        "output", project, f"{graph_type}-dataset-{project}.csv"
-    )
+    seen_this_run = set()
+
+    graph_dataset_filepath = os.path.join("output", f"{graph_type}-dataset-{project}.csv")
+
     if os.path.exists(graph_dataset_filepath):
         with open(graph_dataset_filepath, "r") as f:
+            next(f)  # skip header
             for line in f:
                 parts = line.strip().split(";")
                 if parts:
-                    processed_paths.add(parts[0])  # cfg_filepath
+                    processed_paths.add(parts[0])  # graph_reduced_filepath
 
     total = len(df)
     dataset_samples = []
@@ -494,15 +496,25 @@ def fex_read_graph_file(project, graph_type):
     for index, row in df.iterrows():
         graph_filepath = row[CFG_FILE]
 
-        # --- Step 2: Skip if already processed
-        if graph_filepath in processed_paths:
-            print(f"[{index + 1}/{total}] Skipping (already processed): {graph_filepath}")
+        # ✅ Step 2: Compute reduced path before checking
+        try:
+            graph_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(
+                project, graph_filepath, graph_type
+            )
+        except Exception as e:
+            print(f"[ERROR] Could not compute reduced path for {graph_filepath}: {e}")
             continue
 
+        # ✅ Step 3: Skip if already processed
+        if graph_reduced_filepath in processed_paths or graph_reduced_filepath in seen_this_run:
+            print(f"[{index + 1}/{total}] Skipping (already processed): {graph_reduced_filepath}")
+            continue
+
+        
+        seen_this_run.add(graph_reduced_filepath)
         print(f"[{index + 1}/{total}] Processing graph: {graph_filepath}")
 
         try:
-            graph_reduced_filepath, statements_filepath = obtain_reduced_statement_filepath(project, graph_filepath, graph_type)
             A, X, _, _ = obtain_graph_data_structures(graph_type, graph_reduced_filepath, statements_filepath)
         except Exception as e:
             print(f"[ERROR] Failed processing {graph_filepath}: {e}")
@@ -517,8 +529,13 @@ def fex_read_graph_file(project, graph_type):
 
         if (index + 1) % 10 == 0:
             write_cfgs_to_file(project, dataset_samples, graph_type)
+            dataset_samples.clear()
 
-    write_cfgs_to_file(project, dataset_samples, graph_type)
+    # Final flush
+    if dataset_samples:
+        write_cfgs_to_file(project, dataset_samples, graph_type)
+
+
 
 
 def debug_all_features_for_specific_graph(graph_filepath, statements_filepath, graph_type="cfg"):
@@ -626,11 +643,49 @@ def write_output_file(rows, output_filepath):
         for item in rows_list:
             output_file.write("{},{}\n".format(item[0], item[1]))
 
+import pandas as pd
+from collections import defaultdict
+
+def detect_duplicate_cfg_entries(csv_path, save_duplicates_to=None):
+    print(f"🔍 Checking for duplicates in: {csv_path}")
+    
+    seen = set()
+    duplicates = defaultdict(list)
+
+    # Read CSV line by line to avoid memory overload
+    with open(csv_path, 'r') as f:
+        header = f.readline().strip().split(";")
+        assert header[0] == "cfg_filepath", "Expected first column to be 'cfg_filepath'"
+        
+        for line_num, line in enumerate(f, start=2):  # start=2 to account for header
+            parts = line.strip().split(";")
+            if not parts or len(parts) < 1:
+                continue
+            filepath = parts[0]
+            if filepath in seen:
+                duplicates[filepath].append(line_num)
+            else:
+                seen.add(filepath)
+
+    total_entries = len(seen) + len(duplicates)
+    print(f"✅ Total entries: {total_entries}")
+    print(f"🧠 Unique cfg_filepaths: {len(seen)}")
+    print(f"⚠️ Duplicates found: {len(duplicates)}")
+
+    if save_duplicates_to:
+        with open(save_duplicates_to, "w") as out_f:
+            out_f.write("cfg_filepath;line_numbers\n")
+            for filepath, lines in duplicates.items():
+                out_f.write(f"{filepath};{','.join(map(str, lines))}\n")
+        print(f"📝 Duplicate paths written to: {save_duplicates_to}")
+
+    return duplicates
+
 
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
     project = "linux"  # Change this to the desired project
-    graph_type_list = ["ast"]#, "ast", "pdg"]
+    graph_type_list = ["pdg"]#, "ast", "pdg"]
     graph_type = "pdg"  # Change this to the desired graph type
     commit_hash = "b90c062c65cc8839edfac39778a37a55ca9bda36"  # Example commit hash
     program_name = "arch---x86---kvm---x86.c"  # Example program name
@@ -638,6 +693,7 @@ def main():
 
     for graph_type in graph_type_list:
             print(f"\n### Processing {project} - {graph_type} ###")
+            #detect_duplicate_cfg_entries("output/pdg-dataset-linux.csv")
             fex_read_graph_file(project,graph_type)                              # from cfg_feature_extraction.py
 
     cfg_path = "output/linux-{}-reduced/output-{}-{}/{}/{}-{}.dot".format(graph_type, graph_type, commit_hash, program_name, graph_number, graph_type)

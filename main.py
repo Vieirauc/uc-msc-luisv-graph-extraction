@@ -143,7 +143,7 @@ def summarize_extraction_status(project, graph_type_list):
 def main():
     # source venv/bin/activate
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
-    graph_type_list = ["pdg"]
+    graph_type_list = ["cfg"]
     for project in ["linux"]:
         summarize_extraction_status(project, graph_type_list)
         commits_files = obtain_commits_files(project)

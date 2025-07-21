@@ -68,7 +68,7 @@ def map_functions_to_graph(project, graph_type="ast", csv_filename=None):
     output_name = f"functions-{graph_type}-{project}.csv"
     output_path = os.path.join(output_directory, output_name)
 
-    # ✅ Carregar funções já processadas
+    #  Carregar funções já processadas
     processed_keys = set()
     if os.path.exists(output_path):
         with open(output_path, 'r') as f:
@@ -78,7 +78,7 @@ def map_functions_to_graph(project, graph_type="ast", csv_filename=None):
                 if len(parts) >= 3:
                     processed_keys.add((parts[0], parts[1], parts[2]))
 
-    # ✅ Filtrar apenas commits que ainda têm funções por processar
+    #  Filtrar apenas commits que ainda têm funções por processar
     def has_unprocessed_functions(row):
         try:
             functions = json.loads(row[VULNERABLE_FUNCTIONS])

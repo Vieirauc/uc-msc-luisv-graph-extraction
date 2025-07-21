@@ -99,9 +99,6 @@ def generate_unreduced_graph_artifacts(project, graph_type):
 
 
 
-
-
-
 def reduce_read_cfg_file(project,graph_type="cfg"):
     filepath = os.path.join(data_directory, file_cfg_data_mask.format(project,graph_type))
     df = pd.read_csv(filepath, delimiter=";")
