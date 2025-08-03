@@ -5,8 +5,7 @@ import json
 import ast
 import sys
 import os
-
-
+import random
 
 def count_functions_per_program(csv_file_path):
     """
@@ -109,7 +108,7 @@ def describe_large_dataset(input_path, chunksize=5000):
     max_size_filepath = None
     all_sizes = []
 
-    print(f"📊 Lendo estatísticas do dataset: {input_path}")
+    print(f"Lendo estatísticas do dataset: {input_path}")
 
     for chunk in pd.read_csv(input_path, sep=';', chunksize=chunksize):
         chunk['label'] = chunk['label'].astype(bool)
@@ -136,14 +135,14 @@ def describe_large_dataset(input_path, chunksize=5000):
     mean_size = np.mean(all_sizes)
     p95_size = np.percentile(all_sizes, 95)
 
-    print("\n📈 Estatísticas finais:")
+    print("\nEstatísticas finais:")
     print(f"Total de funções: {total}")
     print(f"Funções vulneráveis: {num_vuln}")
     print(f"Funções não vulneráveis: {num_safe}")
     print(f"Proporção vulneráveis: {prop_vuln:.2%}")
     print(f"Tamanho mínimo do grafo: {min_size}")
     print(f"Tamanho máximo do grafo: {max_size}")
-    print(f" ↪️ Arquivo correspondente ao maior grafo: {max_size_filepath}")
+    print(f"Arquivo correspondente ao maior grafo: {max_size_filepath}")
     print(f"Tamanho médio dos grafos: {mean_size:.2f}")
     print(f"95º percentil do tamanho dos grafos: {p95_size:.2f}")
 
@@ -159,103 +158,95 @@ def describe_large_dataset(input_path, chunksize=5000):
         'p95_size': p95_size
     }
 
-
-import os
 import random
 
-def undersample_adaptive_chunked(input_path, output_path, max_total=10000, min_vuln_ratio=0.3):
-    vuln_count = 0
-    non_vuln_temp = output_path.replace(".csv", "_nonvuln_temp.csv")
-    print(f"\n🔍 Iniciando undersampling (sem pandas, só I/O)...")
+def undersample_preserve_ratio(input_path, output_path, max_total=10000):
+    """
+    Memory-efficient undersampling that preserves original class ratio.
+    """
+    vuln_total = 0
+    nonvuln_total = 0
 
-    with open(input_path, "r") as fin, \
-         open(output_path, "w") as fout_vuln, \
-         open(non_vuln_temp, "w") as fout_nonvuln:
-
-        header = fin.readline()
-        fout_vuln.write(header)
-        fout_nonvuln.write(header)
-
+    # First pass: count totals
+    print(" Calculando proporção original...")
+    with open(input_path, "r") as f:
+        header = f.readline()
         label_idx = header.strip().split(";").index("label")
 
-        for i, line in enumerate(fin):
+        for line in f:
             if not line.strip():
                 continue
-
-            parts = line.strip().split(";")
-            label = parts[label_idx].strip().lower()
-
+            label = line.strip().split(";")[label_idx].strip().lower()
             if label in ["1", "true", "yes"]:
-                fout_vuln.write(line)
-                vuln_count += 1
+                vuln_total += 1
             else:
-                fout_nonvuln.write(line)
+                nonvuln_total += 1
 
-            if i % 100000 == 0:
-                print(f"🔄 Processadas {i} linhas...")
+    total_entries = vuln_total + nonvuln_total
+    vuln_ratio = vuln_total / total_entries
+    nonvuln_ratio = 1 - vuln_ratio
 
-    print(f"✅ Vulneráveis encontrados: {vuln_count}")
+    vuln_keep = int(max_total * vuln_ratio)
+    nonvuln_keep = max_total - vuln_keep
 
-    # Etapa 2: decidir limites
-    if vuln_count >= max_total:
-        vuln_keep = int(max_total * min_vuln_ratio)
-        nonvuln_needed = max_total - vuln_keep
-        skip_vuln = vuln_count - vuln_keep
-        print(f"⚠️ Usando ratio mínima de {min_vuln_ratio*100:.1f}%. Mantendo {vuln_keep} vulneráveis")
-    else:
-        vuln_keep = vuln_count
-        nonvuln_needed = max_total - vuln_keep
-        skip_vuln = 0
-        print(f"✂️ Mantendo todos os {vuln_keep} vulneráveis")
+    print(f" Proporção original: {vuln_ratio:.4f} vulneráveis")
+    print(f" Alvo: {vuln_keep} vulneráveis + {nonvuln_keep} não-vulneráveis")
 
-    # Etapa 3: reescrever apenas N vulneráveis
-    with open(output_path, "r") as vin, open(output_path + ".tmp", "w") as vout:
-        vout.write(vin.readline())  # header
-        kept = 0
-        for line in vin:
-            if skip_vuln > 0:
-                skip_vuln -= 1
+    # Second pass: reservoir sampling
+    reservoir_vuln = []
+    reservoir_nonvuln = []
+    seen_vuln = 0
+    seen_nonvuln = 0
+
+    with open(input_path, "r") as f:
+        header = f.readline()  # again
+        for line_num, line in enumerate(f):
+            if not line.strip():
                 continue
-            if kept >= vuln_keep:
-                break
-            vout.write(line)
-            kept += 1
-    os.replace(output_path + ".tmp", output_path)
-
-    # Etapa 4: sample de não vulneráveis por reservoir
-    print(f"📦 Amostrando {nonvuln_needed} não vulneráveis (modo streaming)")
-    reservoir = []
-    line_count = 0
-    with open(non_vuln_temp, "r") as f:
-        _ = f.readline()  # skip header
-        for line in f:
-            line_count += 1
-            if len(reservoir) < nonvuln_needed:
-                reservoir.append(line)
+            label = line.strip().split(";")[label_idx].strip().lower()
+            if label in ["1", "true", "yes"]:
+                seen_vuln += 1
+                if len(reservoir_vuln) < vuln_keep:
+                    reservoir_vuln.append(line)
+                else:
+                    r = random.randint(0, seen_vuln)
+                    if r < vuln_keep:
+                        reservoir_vuln[r] = line
             else:
-                r = random.randint(0, line_count)
-                if r < nonvuln_needed:
-                    reservoir[r] = line
+                seen_nonvuln += 1
+                if len(reservoir_nonvuln) < nonvuln_keep:
+                    reservoir_nonvuln.append(line)
+                else:
+                    r = random.randint(0, seen_nonvuln)
+                    if r < nonvuln_keep:
+                        reservoir_nonvuln[r] = line
 
-    with open(output_path, "a") as fout:
-        for line in reservoir:
+            if line_num % 100000 == 0 and line_num > 0:
+                print(f" Processadas {line_num:,} linhas...")
+
+    print(f"\n Visto: {seen_vuln} vulneráveis, {seen_nonvuln} não-vulneráveis")
+    print(f" Selecionado: {len(reservoir_vuln)} + {len(reservoir_nonvuln)}")
+
+    with open(output_path, "w") as fout:
+        fout.write(header)
+        for line in reservoir_vuln + reservoir_nonvuln:
             fout.write(line)
 
-    os.remove(non_vuln_temp)
-    print(f"\n🎯 Dataset final salvo em: {output_path}")
-    print(f"Estimado: {vuln_keep + nonvuln_needed} linhas totais")
-
+    print(f"\n Dataset final com proporção preservada salvo em: {output_path}")
 
 
 def main():
-    input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/cfg-dataset-linux.csv"
-    #input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/ast-dataset-linux.csv"
-    output_dataset = input_dataset.replace(".csv", "_undersampled10k.csv")
+    #input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/cfg-dataset-linux-v0.5_filtered.csv"
+    #input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/cfg-dataset-linux-v0.5_filtered_undersampled10k.csv"
+    input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/pdg-dataset-linux.csv"
+    output_dataset = input_dataset.replace(".csv", "_undersampled20k.csv")
 
-    describe_large_dataset("output/pdg-dataset-linux_undersampled10k.csv", chunksize=10000)
+    describe_large_dataset(input_dataset, chunksize=5000)
+    #undersample_preserve_ratio(input_dataset, output_dataset, max_total=20000)
+    #describe_large_dataset(output_dataset, chunksize=5000)
 
-    
-    #undersample_adaptive_chunked(input_path="output/ast-dataset-linux.csv",output_path="output/ast-dataset-linux_undersampled10k.csv",max_total=10000,min_vuln_ratio=0.2)
+    #describe
+    #undersample_adaptive_chunked(input_dataset,output_dataset,max_total=10000,min_vuln_ratio=0.2)
     
 
 if __name__ == "__main__":

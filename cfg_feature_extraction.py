@@ -685,8 +685,8 @@ def detect_duplicate_cfg_entries(csv_path, save_duplicates_to=None):
 def main():
     projects = ["httpd", "glibc", "gecko-dev", "linux", "xen"]
     project = "linux"  # Change this to the desired project
-    graph_type_list = ["pdg"]#, "ast", "pdg"]
-    graph_type = "pdg"  # Change this to the desired graph type
+    graph_type_list = ["ast"]#, "ast", "pdg"]
+    graph_type = "ast"  # Change this to the desired graph type
     commit_hash = "b90c062c65cc8839edfac39778a37a55ca9bda36"  # Example commit hash
     program_name = "arch---x86---kvm---x86.c"  # Example program name
     graph_number = "40"  # Example graph number
