@@ -1,0 +1,4 @@
+Luís Vieira <lvieirapt@gmail.com> <lpedro.vieira18@gmail.com>
+# add any other variants you saw, for example:
+# Luís Vieira <lvieirapt@gmail.com> <“lvieirapt@gmail.com”>
+# Luis Vieira <lvieirapt@gmail.com> <lvieirapt@gmail.com>
