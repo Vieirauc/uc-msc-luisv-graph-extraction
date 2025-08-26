@@ -241,7 +241,7 @@ def main():
     input_dataset = "/home/lucaspc/tese/uc-msc-luisv-graph_extractor/output/pdg-dataset-linux.csv"
     output_dataset = input_dataset.replace(".csv", "_undersampled20k.csv")
 
-    describe_large_dataset(input_dataset, chunksize=5000)
+    describe_large_dataset(output_dataset, chunksize=5000)
     #undersample_preserve_ratio(input_dataset, output_dataset, max_total=20000)
     #describe_large_dataset(output_dataset, chunksize=5000)
 
