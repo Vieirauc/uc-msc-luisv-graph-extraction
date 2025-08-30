@@ -156,11 +156,7 @@ screen -XS train quit
 
 Delete old run outputs:
 
-```
-docker run --rm -it -v "$PWD/docker_outputs":/data alpine sh -c "rm -rf /data/runs/*"
-```
-
-Or inside the container:
+Iinside the container:
 
 ```
 rm -rf /workspace/uc-msc-luisv-cfg-dataset/output/runs/*
@@ -175,7 +171,3 @@ rm -rf /workspace/uc-msc-luisv-cfg-dataset/output/runs/*
 * External classifiers (RF, SVM) and PCA visualization are optional but help interpret embeddings.
 
 ---
-
-✅ This version is **pure Markdown** with only indented code blocks — no \`\`\`bash or other fenced formats. You can drop this straight into your repo.
-
-Want me to also prepare a **short minimal example** at the top (like a “quickest way to train and analyze in 3 commands”) for newcomers?
