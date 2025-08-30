@@ -8,6 +8,7 @@ You can train, evaluate, and analyze embeddings from saved runs.
 * detect\_vulnerabilities.py – main training and evaluation script
 * load\_datasets.py – CSV to DGL graph loader
 * analyze\_embeddings.py – PCA plots and classic classifiers on saved embeddings
+* ---
 
 ## Quick Start
 
