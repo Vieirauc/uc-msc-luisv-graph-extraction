@@ -10,7 +10,7 @@ from cfg_feature_extraction import fex_read_cfg_file, fex_read_graph_file
 
 target_commit = "3b365793c19aff95d1cf9bbea19f138752264d12"
 
-base_project_directory = "/home/lucaspc/tese/projects"
+base_project_directory = "/home/yourpc/tese/projects"
 commit_data_directory = "function-data"
 commit_data_mask = "{}-functions.csv"
 commit_data = "linux-functions.csv"
