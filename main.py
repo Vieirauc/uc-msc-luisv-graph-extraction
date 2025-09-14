@@ -20,7 +20,7 @@ FILE_PATH = "File Path"
 SUBSET = True
 GRAPH_TYPE = "ast"
 
-base_output_directory = "/home/lucaspc/tese/output"
+base_output_directory = "/home/yourpc/tese/output"
 
 
 def obtain_commits(project):
